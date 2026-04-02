@@ -50,3 +50,7 @@ strict = false
 [[tool.mypy.overrides]]
 module = ["dxcam", "win32cred", "win32con", "pywintypes"]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["comtypes", "comtypes.client"]
+ignore_missing_imports = true
