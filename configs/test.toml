@@ -1,0 +1,32 @@
+# Nexus Agent — Test Environment Overrides
+# Loaded automatically by tests via load_settings("configs/test.toml").
+
+[capture]
+fps = 5
+stabilization_timeout_ms = 500
+stabilization_poll_ms = 50
+
+[source]
+uia_timeout_ms = 500
+dom_timeout_ms = 500
+
+[transport]
+uia_action_timeout_ms = 500
+dom_action_timeout_ms = 500
+
+[cloud]
+max_retries = 1
+timeout_seconds = 5
+
+[budget]
+max_cost_per_task_usd = 0.01
+max_cost_per_day_usd = 0.10
+
+[storage]
+db_path = ":memory:"
+log_dir = "logs/test"
+
+[safety]
+dry_run_mode = true
+max_actions_per_task = 10
+max_task_duration_minutes = 1

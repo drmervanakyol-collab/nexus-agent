@@ -1,0 +1,93 @@
+# Nexus Agent — Default Configuration
+# All values here mirror the Python defaults in nexus/core/settings.py.
+# Override per-environment in development.toml or test.toml.
+
+[capture]
+fps = 15
+max_frame_buffer = 10
+stabilization_timeout_ms = 3000
+stabilization_poll_ms = 100
+dirty_region_block_size = 32
+dirty_region_full_refresh_ratio = 0.7
+
+[source]
+uia_enabled = true
+uia_timeout_ms = 2000
+dom_enabled = true
+dom_timeout_ms = 2000
+dom_debug_port = 9222
+file_direct_enabled = true
+visual_fallback_always = false
+
+[transport]
+prefer_native_action = true
+uia_action_timeout_ms = 2000
+dom_action_timeout_ms = 2000
+fallback_to_mouse = true
+
+[perception]
+ocr_confidence_threshold = 0.7
+locator_confidence_threshold = 0.6
+ambiguity_local_threshold = 0.4
+ambiguity_cloud_threshold = 0.7
+perception_cache_ttl_ms = 200
+max_graph_nodes = 500
+
+[cloud]
+primary_provider = "openai"
+openai_model = "gpt-4o"
+openai_fallback_model = "gpt-4o-mini"
+anthropic_model = "claude-3-5-sonnet-20241022"
+anthropic_fallback_model = "claude-3-haiku-20240307"
+max_tokens = 1000
+timeout_seconds = 30
+max_retries = 3
+
+[budget]
+max_cost_per_task_usd = 1.0
+max_cost_per_day_usd = 10.0
+warn_at_percent = 0.8
+# Pricing (USD / 1k tokens) — 2024-Q4
+gpt4o_input_per_1k = 0.005
+gpt4o_output_per_1k = 0.015
+gpt4o_mini_input_per_1k = 0.00015
+gpt4o_mini_output_per_1k = 0.0006
+claude_sonnet_input_per_1k = 0.003
+claude_sonnet_output_per_1k = 0.015
+claude_haiku_input_per_1k = 0.00025
+claude_haiku_output_per_1k = 0.00125
+
+[storage]
+db_path = "nexus.db"
+log_dir = "logs"
+max_db_size_mb = 500
+memory_max_size_mb = 256
+memory_evict_after_days = 30
+
+[safety]
+max_actions_per_task = 100
+max_task_duration_minutes = 30
+sensitive_masking_enabled = true
+dry_run_mode = false
+
+[verification]
+click_method = "visual"
+type_method = "visual"
+select_method = "source"
+drag_method = "visual"
+scroll_method = "none"
+hover_method = "none"
+keyboard_shortcut_method = "visual"
+copy_paste_method = "visual"
+field_replace_method = "visual+semantic"
+form_submit_method = "visual+semantic"
+row_write_method = "combined"
+sheet_write_method = "source_level"
+cell_edit_method = "source+visual"
+destructive_method = "combined+preconfirm"
+delete_method = "combined+preconfirm"
+overwrite_method = "combined+preconfirm"
+file_open_method = "source"
+file_save_method = "source+visual"
+navigate_method = "visual"
+macroaction_method = "combined"
