@@ -42,3 +42,11 @@ dev = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["nexus"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = false
+
+[[tool.mypy.overrides]]
+module = ["dxcam", "win32cred", "win32con", "pywintypes"]
+ignore_missing_imports = true
