@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(read dir:*)",
+      "Bash(python:*)",
+      "Bash(pip install:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git remote:*)",
+      "Bash(git branch:*)",
+      "Bash(git push:*)",
+      "Bash(ruff check:*)",
+      "Bash(mypy nexus/core/settings.py)",
+      "Bash(make check:*)",
+      "Bash(mypy nexus/)",
+      "Bash(pytest tests/unit/)",
+      "Bash(choco install:*)",
+      "Bash(make:*)"
+    ]
+  }
+}
