@@ -1,0 +1,44 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "nexus-agent"
+version = "0.1.0"
+description = "Nexus Agent — autonomous desktop/web agent"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.0",
+    "pydantic-settings",
+    "structlog",
+    "aiosqlite",
+    "dxcam",
+    "pytesseract",
+    "pillow",
+    "pywin32",
+    "openai>=1.0",
+    "anthropic>=0.20",
+    "langdetect",
+    "numpy",
+    "opencv-python",
+    "aiohttp",
+    "websockets",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "pytest-cov",
+    "pytest-mock",
+    "pytest-timeout",
+    "ruff",
+    "mypy",
+    "hypothesis",
+    "factory-boy",
+    "bandit",
+    "safety",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["nexus"]
