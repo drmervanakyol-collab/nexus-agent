@@ -1,0 +1,149 @@
+"""
+nexus/source/transport/fallback.py
+Mouse and keyboard transports — low-level OS input fallbacks.
+
+These are used when a native UIA/DOM action is unavailable or fails.
+Both transports are async and wrap synchronous OS API calls via
+``asyncio.to_thread`` so they don't block the event loop.
+
+Pluggable click / type functions
+---------------------------------
+Both classes accept optional ``_click_fn`` / ``_type_fn`` parameters so
+that unit tests can inject synchronous callables without touching the OS
+input stack.  Production code uses the real pyautogui / pywin32 backends
+(lazy-imported so the module loads cleanly on machines without those libs).
+"""
+from __future__ import annotations
+
+import asyncio
+from collections.abc import Callable
+
+from nexus.infra.logger import get_logger
+
+_log = get_logger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Default OS-level implementations (lazy imports)
+# ---------------------------------------------------------------------------
+
+
+def _default_mouse_click(x: int, y: int) -> None:
+    """
+    Move the mouse to (x, y) and click the left button.
+
+    Tries pyautogui first; falls back to pywin32 SendInput.
+    Raises RuntimeError if neither is available.
+    """
+    try:
+        import pyautogui  # noqa: PLC0415
+
+        pyautogui.click(x, y)
+    except ImportError:
+        try:
+            import win32api  # noqa: PLC0415
+            import win32con  # noqa: PLC0415
+
+            win32api.SetCursorPos((x, y))
+            win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, x, y, 0, 0)
+            win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, x, y, 0, 0)
+        except ImportError as exc:
+            raise RuntimeError(
+                "MouseTransport requires pyautogui or pywin32"
+            ) from exc
+
+
+def _default_keyboard_type(text: str) -> None:
+    """
+    Type *text* using the OS keyboard.
+
+    Tries pyautogui first; raises RuntimeError if unavailable.
+    """
+    try:
+        import pyautogui  # noqa: PLC0415
+
+        pyautogui.typewrite(text, interval=0.02)
+    except ImportError as exc:
+        raise RuntimeError(
+            "KeyboardTransport requires pyautogui"
+        ) from exc
+
+
+# ---------------------------------------------------------------------------
+# MouseTransport
+# ---------------------------------------------------------------------------
+
+
+class MouseTransport:
+    """
+    Delivers click actions via the OS mouse API.
+
+    Parameters
+    ----------
+    _click_fn:
+        Sync callable ``(x: int, y: int) -> None``.  Defaults to the
+        real pyautogui / win32api backend.  Inject a mock in tests.
+    """
+
+    def __init__(
+        self,
+        *,
+        _click_fn: Callable[[int, int], None] | None = None,
+    ) -> None:
+        self._click_fn: Callable[[int, int], None] = (
+            _click_fn or _default_mouse_click
+        )
+
+    async def click(self, x: int, y: int) -> bool:
+        """
+        Click at screen coordinates (x, y).
+
+        Returns True on success, False on any OS-level error.
+        """
+        try:
+            await asyncio.to_thread(self._click_fn, x, y)
+            _log.debug("mouse_click_ok", x=x, y=y)
+            return True
+        except Exception as exc:
+            _log.debug("mouse_click_failed", x=x, y=y, error=str(exc))
+            return False
+
+
+# ---------------------------------------------------------------------------
+# KeyboardTransport
+# ---------------------------------------------------------------------------
+
+
+class KeyboardTransport:
+    """
+    Delivers text input via the OS keyboard API.
+
+    Parameters
+    ----------
+    _type_fn:
+        Sync callable ``(text: str) -> None``.  Defaults to the real
+        pyautogui backend.  Inject a mock in tests.
+    """
+
+    def __init__(
+        self,
+        *,
+        _type_fn: Callable[[str], None] | None = None,
+    ) -> None:
+        self._type_fn: Callable[[str], None] = (
+            _type_fn or _default_keyboard_type
+        )
+
+    async def type_text(self, text: str) -> bool:
+        """
+        Type *text* using OS keyboard events.
+
+        Returns True on success, False on any OS-level error.
+        """
+        try:
+            await asyncio.to_thread(self._type_fn, text)
+            _log.debug("keyboard_type_ok", length=len(text))
+            return True
+        except Exception as exc:
+            _log.debug("keyboard_type_failed", error=str(exc))
+            return False
