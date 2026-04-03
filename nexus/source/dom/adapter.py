@@ -37,7 +37,7 @@ import asyncio
 import json
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from nexus.core.settings import NexusSettings
@@ -87,10 +87,10 @@ async def _default_session_factory(port: int) -> AsyncIterator[Any]:
 
     Raises on any connection error so that callers can catch and return False.
     """
-    import aiohttp  # type: ignore[import-untyped]  # noqa: PLC0415
-    import websockets  # type: ignore[import-untyped]  # noqa: PLC0415
+    import aiohttp  # noqa: PLC0415
+    import websockets  # noqa: PLC0415
 
-    async with aiohttp.ClientSession() as http:
+    async with aiohttp.ClientSession() as http:  # noqa: SIM117
         async with http.get(f"http://localhost:{port}/json") as resp:
             targets: list[dict[str, Any]] = await resp.json()
 

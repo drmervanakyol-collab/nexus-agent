@@ -178,7 +178,7 @@ def _probe_tesseract_path() -> str | None:
 
 def _probe_dxcam_importable() -> bool:
     try:
-        import dxcam  # type: ignore[import-untyped]  # noqa: F401, PLC0415
+        import dxcam  # noqa: F401, PLC0415
         return True
     except Exception:
         return False
@@ -213,7 +213,7 @@ def _probe_credential_manager() -> bool:
     except Exception:
         # win32cred accessible but no creds stored is still OK
         try:
-            import win32cred  # type: ignore[import-untyped]  # noqa: F401, PLC0415
+            import win32cred  # noqa: F401, PLC0415
             return True
         except ImportError:
             return False

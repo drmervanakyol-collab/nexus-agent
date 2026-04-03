@@ -54,3 +54,11 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = ["comtypes", "comtypes.client"]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["aiohttp", "websockets"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["pytesseract", "pdf2image", "openpyxl", "pypdf"]
+ignore_missing_imports = true

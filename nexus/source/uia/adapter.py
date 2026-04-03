@@ -107,7 +107,7 @@ class UIAElement:
 
 def _default_automation_factory() -> Any:
     """Create the real IUIAutomation COM object via comtypes."""
-    import comtypes.client  # type: ignore[import-untyped]  # noqa: PLC0415
+    import comtypes.client  # noqa: PLC0415
 
     return comtypes.client.CreateObject(
         _CLSID_CUIAutomation,
