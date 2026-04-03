@@ -390,9 +390,17 @@ class TestResolveExceptionHandling:
 
 
 class TestResolveLogging:
-    def test_each_attempt_emits_log_event(self):
-        """Every source tried → one structured log event per attempt."""
-        from structlog.testing import capture_logs
+    """
+    Verify that SourcePriorityResolver emits one log call per attempt.
+
+    Uses unittest.mock.patch on the module-level ``_log`` so that tests
+    are immune to structlog's ``cache_logger_on_first_use`` behaviour that
+    can be triggered by other test modules calling ``configure_logging()``.
+    """
+
+    def test_each_attempt_emits_log_info_call(self):
+        """Every source tried → _log.info called once per source."""
+        from unittest.mock import patch
 
         adapter = SourcePriorityResolver(
             _make_settings(),
@@ -401,47 +409,50 @@ class TestResolveLogging:
             _file_probe=_failing_probe(),
             _visual_probe=_success_probe(),
         )
-        with capture_logs() as logs:
+        with patch("nexus.source.resolver._log") as mock_log:
             adapter.resolve({})
 
-        # 4 attempts: uia (fail), dom (fail), file (fail), visual (success)
-        tried = [e for e in logs if e.get("event") == "source_tried"]
-        assert len(tried) == 4
+        # 4 info calls: uia fail, dom fail, file fail, visual success
+        info_calls = mock_log.info.call_args_list
+        source_tried = [c for c in info_calls if c[0][0] == "source_tried"]
+        assert len(source_tried) == 4
 
-    def test_log_events_contain_source_key(self):
-        """Each log event includes a 'source' key."""
-        from structlog.testing import capture_logs
+    def test_log_calls_contain_source_kwarg(self):
+        """Each log.info call includes source= keyword argument."""
+        from unittest.mock import patch
 
         adapter = SourcePriorityResolver(
             _make_settings(),
             _uia_probe=_success_probe(),
         )
-        with capture_logs() as logs:
+        with patch("nexus.source.resolver._log") as mock_log:
             adapter.resolve({})
 
-        tried = [e for e in logs if e.get("event") == "source_tried"]
-        assert all("source" in e for e in tried)
-        assert tried[0]["source"] == "uia"
+        info_calls = mock_log.info.call_args_list
+        source_tried = [c for c in info_calls if c[0][0] == "source_tried"]
+        assert len(source_tried) == 1
+        assert source_tried[0].kwargs["source"] == "uia"
 
     def test_failed_attempts_logged_before_success(self):
-        """UIA failure event logged before DOM success event."""
-        from structlog.testing import capture_logs
+        """UIA failure call logged before DOM success call."""
+        from unittest.mock import patch
 
         adapter = SourcePriorityResolver(
             _make_settings(),
             _uia_probe=_failing_probe(),
             _dom_probe=_success_probe(),
         )
-        with capture_logs() as logs:
+        with patch("nexus.source.resolver._log") as mock_log:
             adapter.resolve({})
 
-        tried = [e for e in logs if e.get("event") == "source_tried"]
+        info_calls = mock_log.info.call_args_list
+        source_tried = [c for c in info_calls if c[0][0] == "source_tried"]
         # Exactly 2: uia fail + dom success
-        assert len(tried) == 2
-        assert tried[0]["source"] == "uia"
-        assert tried[0]["success"] is False
-        assert tried[1]["source"] == "dom"
-        assert tried[1]["success"] is True
+        assert len(source_tried) == 2
+        assert source_tried[0].kwargs["source"] == "uia"
+        assert source_tried[0].kwargs["success"] is False
+        assert source_tried[1].kwargs["source"] == "dom"
+        assert source_tried[1].kwargs["success"] is True
 
 
 # ---------------------------------------------------------------------------
