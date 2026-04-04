@@ -16,7 +16,13 @@
       "Bash(mypy nexus/)",
       "Bash(pytest tests/unit/)",
       "Bash(choco install:*)",
-      "Bash(make:*)"
+      "Bash(make:*)",
+      "Bash(pytest tests/unit/test_trace.py tests/unit/test_telemetry.py tests/unit/test_logger.py -v)",
+      "Bash(pytest tests/unit/test_database.py -v)",
+      "Bash(pytest tests/unit/test_cost_tracker.py -v)",
+      "Bash(pytest tests/unit/test_health.py -v)",
+      "Bash(pytest tests/integration/test_block0.py -v)",
+      "Bash(pytest tests/unit/ tests/integration/)"
     ]
   }
 }
