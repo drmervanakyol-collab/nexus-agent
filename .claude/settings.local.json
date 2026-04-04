@@ -22,7 +22,18 @@
       "Bash(pytest tests/unit/test_cost_tracker.py -v)",
       "Bash(pytest tests/unit/test_health.py -v)",
       "Bash(pytest tests/integration/test_block0.py -v)",
-      "Bash(pytest tests/unit/ tests/integration/)"
+      "Bash(pytest tests/unit/ tests/integration/)",
+      "Bash(pip show:*)",
+      "Bash(tesseract --version)",
+      "Bash(tesseract --list-langs)",
+      "Bash(mypy nexus/perception/locator/)",
+      "Bash(mypy nexus/perception/reader/reader.py)",
+      "Bash(mypy nexus/perception/matcher/)",
+      "Bash(mypy nexus/perception/temporal/)",
+      "Bash(mypy nexus/perception/spatial_graph.py)",
+      "Bash(mypy nexus/perception/arbitration/)",
+      "Bash(mypy:*)",
+      "Bash(git check-ignore:*)"
     ]
   }
 }
