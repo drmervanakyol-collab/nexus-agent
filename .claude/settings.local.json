@@ -33,7 +33,9 @@
       "Bash(mypy nexus/perception/spatial_graph.py)",
       "Bash(mypy nexus/perception/arbitration/)",
       "Bash(mypy:*)",
-      "Bash(git check-ignore:*)"
+      "Bash(git check-ignore:*)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(echo \"RUFF_EXIT: $?\")"
     ]
   }
 }
