@@ -77,6 +77,8 @@ class TransportSettings(BaseModel):
     uia_action_timeout_ms: int = 2000
     dom_action_timeout_ms: int = 2000
     fallback_to_mouse: bool = True
+    key_press_delay_ms: int = 20          # inter-keystroke delay in ms
+    type_verify_max_retries: int = 3      # OCR-verify retry attempts after mistype
 
 
 class PerceptionSettings(BaseModel):
