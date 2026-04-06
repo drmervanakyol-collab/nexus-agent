@@ -19,7 +19,7 @@ from pathlib import Path
 import aiosqlite
 
 MAX_CONNECTIONS = 5
-_MIGRATION_FILE = Path(__file__).parent.parent.parent / "migrations" / "001_initial.sql"
+_MIGRATIONS_DIR = Path(__file__).parent.parent.parent / "migrations"
 
 
 async def _configure(conn: aiosqlite.Connection) -> None:
@@ -31,9 +31,11 @@ async def _configure(conn: aiosqlite.Connection) -> None:
 
 
 async def _run_migrations(conn: aiosqlite.Connection) -> None:
-    """Execute the initial migration SQL (idempotent)."""
-    sql = _MIGRATION_FILE.read_text(encoding="utf-8")
-    await conn.executescript(sql)
+    """Execute all migration SQL files in lexicographic order (idempotent)."""
+    migration_files = sorted(_MIGRATIONS_DIR.glob("*.sql"))
+    for migration_file in migration_files:
+        sql = migration_file.read_text(encoding="utf-8")
+        await conn.executescript(sql)
     await conn.commit()
 
 

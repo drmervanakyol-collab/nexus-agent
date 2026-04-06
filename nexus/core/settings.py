@@ -219,6 +219,28 @@ class VerificationSettings(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# HITL settings
+# ---------------------------------------------------------------------------
+
+
+class HITLSettings(BaseModel):
+    """Configuration for Human-in-the-Loop prompts (ADR-008)."""
+
+    timeout_s: float = 300.0
+    """Seconds to wait for a human response before using the default option."""
+
+    headless: bool = False
+    """When True skip all terminal prompts and return the default immediately."""
+
+    default_action: str = "skip"
+    """
+    The default action string when a prompt times out or headless=True.
+    Must match one of the options provided in the HITLRequest, or be a
+    free-form string if no options list is given.
+    """
+
+
+# ---------------------------------------------------------------------------
 # Root settings (env prefix: NEXUS_)
 # ---------------------------------------------------------------------------
 
@@ -248,6 +270,7 @@ class NexusSettings(BaseSettings):
     storage: StorageSettings = Field(default_factory=StorageSettings)
     safety: SafetySettings = Field(default_factory=SafetySettings)
     verification: VerificationSettings = Field(default_factory=VerificationSettings)
+    hitl: HITLSettings = Field(default_factory=lambda: HITLSettings())
 
 
 # ---------------------------------------------------------------------------
