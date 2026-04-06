@@ -115,8 +115,10 @@ class VisualVerifier:
         )
 
         # require_change: fail if the screen did not visibly update
+        false_positive = False
         if policy.require_change and change_ratio < 0.001:
             confidence = 0.0
+            false_positive = True
 
         success = confidence >= policy.confidence_threshold
         duration_ms = (time.perf_counter() - t0) * 1000.0
@@ -144,6 +146,7 @@ class VisualVerifier:
             detail=detail,
             expected_value=expected_text,
             observed_value=ocr_text,
+            false_positive=false_positive,
         )
 
     # ------------------------------------------------------------------

@@ -48,13 +48,19 @@ class VerificationResult:
     expected_value: str | None = None
     observed_value: str | None = None
     side_effects: list[str] = field(default_factory=list)
+    false_positive: bool = False
+    """
+    True when the action appeared to succeed (no error) but the screen
+    showed no observable change (before == after with require_change=True).
+    This indicates the action was a no-op and did not have its intended effect.
+    """
 
     # ------------------------------------------------------------------
     # Convenience factory — SKIP
     # ------------------------------------------------------------------
 
     @classmethod
-    def skipped(cls) -> "VerificationResult":
+    def skipped(cls) -> VerificationResult:
         """Return a result representing a deliberately skipped verification."""
         return cls(
             success=True,
