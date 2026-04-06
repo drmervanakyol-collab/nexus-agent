@@ -488,6 +488,22 @@ class TaskExecutor:
                     )
                 ctx.total_cost_usd += decision.cost_incurred
 
+                # 10b. Cost cap check
+                cost_cap = self._settings.budget.max_cost_per_task_usd
+                if cost_cap > 0 and ctx.total_cost_usd >= cost_cap:
+                    ctx.status = "failed"
+                    error = (
+                        f"Cost cap exceeded: ${ctx.total_cost_usd:.4f} >= "
+                        f"${cost_cap:.4f}"
+                    )
+                    _log.warning(
+                        "task_executor.cost_cap",
+                        task_id=task_id,
+                        cost=ctx.total_cost_usd,
+                        cap=cost_cap,
+                    )
+                    break
+
                 # 11. Persist action row
                 action_id = f"{task_id}-step-{step}"
                 outcome = (
