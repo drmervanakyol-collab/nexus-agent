@@ -14,7 +14,7 @@ ci: lint test
 	safety check
 
 golden:
-	pytest tests/golden/
+	NEXUS_GOLDEN_TESTS=1 pytest tests/golden/ -v -s
 
 bench:
 	pytest tests/benchmarks/
