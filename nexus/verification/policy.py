@@ -24,7 +24,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum, auto
 
-
 # ---------------------------------------------------------------------------
 # VerificationMode
 # ---------------------------------------------------------------------------
@@ -78,7 +77,7 @@ class VerificationPolicy:
     # ------------------------------------------------------------------
 
     @classmethod
-    def skip(cls) -> "VerificationPolicy":
+    def skip(cls) -> VerificationPolicy:
         """Return a policy that performs no verification."""
         return cls(mode=VerificationMode.SKIP)
 
@@ -89,7 +88,7 @@ class VerificationPolicy:
         timeout_s: float = 2.0,
         confidence_threshold: float = 0.80,
         require_change: bool = False,
-    ) -> "VerificationPolicy":
+    ) -> VerificationPolicy:
         """Return a visual-only verification policy."""
         return cls(
             mode=VerificationMode.VISUAL,
@@ -104,7 +103,7 @@ class VerificationPolicy:
         *,
         timeout_s: float = 2.0,
         confidence_threshold: float = 0.90,
-    ) -> "VerificationPolicy":
+    ) -> VerificationPolicy:
         """Return a source-based verification policy."""
         return cls(
             mode=VerificationMode.SOURCE,

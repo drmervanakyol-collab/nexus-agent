@@ -35,7 +35,8 @@
       "Bash(mypy:*)",
       "Bash(git check-ignore:*)",
       "Bash(echo \"EXIT: $?\")",
-      "Bash(echo \"RUFF_EXIT: $?\")"
+      "Bash(echo \"RUFF_EXIT: $?\")",
+      "Bash(ls *.toml *.cfg)"
     ]
   }
 }

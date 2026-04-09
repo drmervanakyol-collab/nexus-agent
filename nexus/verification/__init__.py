@@ -12,7 +12,7 @@ SourceVerifier        — structured source read-back verifier
 """
 from nexus.verification.policy import VerificationMode, VerificationPolicy
 from nexus.verification.result import VerificationResult
-from nexus.verification.source_verification import SourceVerifier, SourceProbe
+from nexus.verification.source_verification import SourceProbe, SourceVerifier
 from nexus.verification.visual_verification import OcrFn, VisualVerifier
 
 __all__ = [
