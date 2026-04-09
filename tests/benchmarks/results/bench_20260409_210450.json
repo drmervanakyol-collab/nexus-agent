@@ -1,0 +1,17 @@
+{
+  "generated_at": "2026-04-09T21:04:50.165987+00:00",
+  "all_passed": true,
+  "results": [
+    {
+      "name": "test",
+      "target_label": "x",
+      "unit": "x",
+      "target_value": 1.0,
+      "higher_is_better": true,
+      "measured_value": 2.0,
+      "passed": true,
+      "samples_count": 0,
+      "extra": {}
+    }
+  ]
+}

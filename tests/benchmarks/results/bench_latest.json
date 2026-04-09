@@ -1,0 +1,145 @@
+{
+  "generated_at": "2026-04-09T21:06:03.432003+00:00",
+  "all_passed": true,
+  "results": [
+    {
+      "name": "capture_fps",
+      "target_label": ">10.0 FPS over 30.0s",
+      "unit": "FPS",
+      "target_value": 10.0,
+      "higher_is_better": true,
+      "measured_value": 5044844.1397,
+      "passed": true,
+      "samples_count": 1,
+      "extra": {
+        "frames_total": 450,
+        "elapsed_s": 0.0001,
+        "simulated_duration_s": 30.0
+      }
+    },
+    {
+      "name": "decision_latency",
+      "target_label": "avg < 200.0 ms over 100 decisions",
+      "unit": "ms",
+      "target_value": 200.0,
+      "higher_is_better": false,
+      "measured_value": 0.1704,
+      "passed": true,
+      "samples_count": 100,
+      "extra": {
+        "avg_ms": 0.17,
+        "p95_ms": 0.162,
+        "min_ms": 0.116,
+        "max_ms": 4.416,
+        "decisions": 100
+      }
+    },
+    {
+      "name": "end_to_end",
+      "target_label": ">80% success rate over 10 runs",
+      "unit": "success_rate",
+      "target_value": 0.8,
+      "higher_is_better": true,
+      "measured_value": 1.0,
+      "passed": true,
+      "samples_count": 1,
+      "extra": {
+        "successes": 10,
+        "total_runs": 10,
+        "success_rate_pct": 100.0,
+        "avg_run_ms": 32.82,
+        "min_run_ms": 30.95,
+        "max_run_ms": 34.61
+      }
+    },
+    {
+      "name": "memory_soak",
+      "target_label": "heap growth < 50.0 MB over 9000 iterations",
+      "unit": "MB",
+      "target_value": 50.0,
+      "higher_is_better": false,
+      "measured_value": 0.0128,
+      "passed": true,
+      "samples_count": 1,
+      "extra": {
+        "growth_mb": 0.013,
+        "iterations": 9000,
+        "elapsed_s": 3.01,
+        "simulated_minutes": 30.0,
+        "top_leaks": [
+          {
+            "location": "C:\\Users\\Mervan\\AppData\\Local\\Programs\\Python\\Python314\\Lib\\site-packages\\structlog\\processors.py:557",
+            "size_kb": 7.1
+          },
+          {
+            "location": "C:\\Users\\Mervan\\nexus-agent\\tests\\benchmarks\\bench_memory_soak.py:61",
+            "size_kb": 5.3
+          },
+          {
+            "location": "C:\\Users\\Mervan\\AppData\\Local\\Programs\\Python\\Python314\\Lib\\tracemalloc.py:560",
+            "size_kb": 0.3
+          },
+          {
+            "location": "C:\\Users\\Mervan\\AppData\\Local\\Programs\\Python\\Python314\\Lib\\tracemalloc.py:423",
+            "size_kb": 0.3
+          },
+          {
+            "location": "C:\\Users\\Mervan\\nexus-agent\\tests\\benchmarks\\bench_memory_soak.py:132",
+            "size_kb": 0.0
+          }
+        ]
+      }
+    },
+    {
+      "name": "ocr_accuracy",
+      "target_label": ">90% char accuracy over 20 images",
+      "unit": "accuracy",
+      "target_value": 0.9,
+      "higher_is_better": true,
+      "measured_value": 1.0,
+      "passed": true,
+      "samples_count": 20,
+      "extra": {
+        "avg_accuracy_pct": 100.0,
+        "min_accuracy_pct": 100.0,
+        "avg_latency_ms": 28.974,
+        "images": 20
+      }
+    },
+    {
+      "name": "perception_latency",
+      "target_label": "avg < 500.0 ms over 50 frames",
+      "unit": "ms",
+      "target_value": 500.0,
+      "higher_is_better": false,
+      "measured_value": 0.122,
+      "passed": true,
+      "samples_count": 50,
+      "extra": {
+        "avg_ms": 0.122,
+        "p95_ms": 0.145,
+        "min_ms": 0.111,
+        "max_ms": 0.248,
+        "frames": 50
+      }
+    },
+    {
+      "name": "transport_latency_comparison",
+      "target_label": "UIA avg < mouse avg (native advantage)",
+      "unit": "ms",
+      "target_value": 0.24222600273787975,
+      "higher_is_better": false,
+      "measured_value": 0.1116,
+      "passed": true,
+      "samples_count": 100,
+      "extra": {
+        "uia_avg_ms": 0.1116,
+        "mouse_avg_ms": 0.2422,
+        "uia_p95_ms": 0.1306,
+        "mouse_p95_ms": 0.3124,
+        "speedup_ratio": 2.17,
+        "iterations": 100
+      }
+    }
+  ]
+}
