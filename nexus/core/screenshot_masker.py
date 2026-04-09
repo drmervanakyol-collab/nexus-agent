@@ -49,6 +49,7 @@ class ScreenshotMasker:
         regions: list[Rect],
         *,
         labels: list[str] | None = None,
+        transport: str = "visual",
     ) -> tuple[np.ndarray, MaskingResult]:
         """
         Return a copy of *image* with *regions* blacked-out.
@@ -61,6 +62,11 @@ class ScreenshotMasker:
             Screen rectangles to erase.
         labels:
             Optional human-readable names for each region (for logging).
+        transport:
+            The transport method that will use this image.  When a native
+            transport is used (``"uia"``, ``"dom"``, ``"file"``, or
+            ``"native"``), the screenshot is not sent to any cloud endpoint
+            and the log entry reflects that.  Default: ``"visual"``.
 
         Returns
         -------
@@ -95,12 +101,25 @@ class ScreenshotMasker:
             region_labels=effective_labels,
         )
 
-        _log.info(
-            "screenshot_masked",
-            regions_masked=result.regions_masked,
-            pixels_masked=result.pixels_masked,
-            labels=result.region_labels,
-        )
+        _native_transports = {"uia", "dom", "file", "native"}
+        screenshot_sent = transport.lower() not in _native_transports
+
+        if screenshot_sent:
+            _log.info(
+                "screenshot_masked",
+                regions_masked=result.regions_masked,
+                pixels_masked=result.pixels_masked,
+                labels=result.region_labels,
+                transport=transport,
+                screenshot_sent=True,
+            )
+        else:
+            _log.info(
+                "screenshot_not_sent",
+                transport=transport,
+                screenshot_sent=False,
+                note="native transport — screenshot stays local",
+            )
 
         return out, result
 
