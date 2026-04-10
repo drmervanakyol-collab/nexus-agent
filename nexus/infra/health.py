@@ -173,6 +173,25 @@ def _probe_dpi_awareness() -> int | None:
 
 
 def _probe_tesseract_path() -> str | None:
+    """
+    Locate the Tesseract binary using the following priority:
+
+    1. ``NEXUS_TESSERACT_PATH`` environment variable — used by the packaged
+       build to point at the embedded binary inside the PyInstaller bundle.
+    2. ``shutil.which("tesseract")`` — standard PATH search for development
+       and system-installed Tesseract.
+    """
+    import os
+
+    explicit = os.environ.get("NEXUS_TESSERACT_PATH", "").strip()
+    if explicit:
+        from pathlib import Path
+
+        p = Path(explicit)
+        if p.is_file():
+            return str(p)
+        # env var set but file missing — fall through to PATH search so the
+        # health check failure message is meaningful
     return shutil.which("tesseract")
 
 
@@ -445,22 +464,40 @@ class HealthChecker:
         )
 
     def _check_tesseract_binary(self) -> CheckResult:
+        """
+        Check Tesseract binary accessibility.
+
+        Resolves via NEXUS_TESSERACT_PATH env var (set by packaging) first,
+        then falls back to PATH search.  Reports the resolved path so users
+        and support engineers can immediately see where the binary lives.
+        """
         path = _probe_tesseract_path()
         if path:
             return CheckResult(
                 name=CHECK_TESSERACT_BINARY,
                 status="ok",
-                message=f"tesseract binary found at: {path}",
+                message=f"Tesseract binary accessible at: {path}",
+            )
+        import os
+
+        env_path = os.environ.get("NEXUS_TESSERACT_PATH", "")
+        if env_path:
+            fix = (
+                f"NEXUS_TESSERACT_PATH is set to {env_path!r} but the file "
+                "was not found. Re-install Nexus Agent or repair the package."
+            )
+        else:
+            fix = (
+                "Install Tesseract OCR from "
+                "https://github.com/UB-Mannheim/tesseract/wiki and add its "
+                "directory to PATH, or set NEXUS_TESSERACT_PATH to the full "
+                "binary path."
             )
         return CheckResult(
             name=CHECK_TESSERACT_BINARY,
             status="fail",
-            message="tesseract binary not found on PATH.",
-            fix_hint=(
-                "Install Tesseract OCR from "
-                "https://github.com/UB-Mannheim/tesseract/wiki and add its "
-                "installation directory to the system PATH."
-            ),
+            message="Tesseract binary not accessible.",
+            fix_hint=fix,
         )
 
     def _check_dxcam(self) -> CheckResult:
