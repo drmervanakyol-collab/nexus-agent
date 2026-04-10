@@ -105,8 +105,8 @@ class TestOnboardingBrowserSetup:
         flow = OnboardingFlow(
             _print_fn=lambda _: None,
             _prompt_fn=lambda _: prompts.pop(0) if prompts else "",
-            _has_consent_fn=lambda scope: store.get(scope, False),
-            _save_consent_fn=lambda scope: store.update({scope: True}),
+            _has_consent_fn=lambda scope, version: store.get(f"{scope}:{version}", False),
+            _save_consent_fn=lambda scope, version: store.update({f"{scope}:{version}": True}),
             _health_check_fn=lambda: _ok_health(),
             _validate_key_fn=lambda p, k: (True, "ok"),
             _launch_browser_fn=lambda: launch_calls.append(True) or True,  # type: ignore[func-returns-value]
@@ -116,20 +116,20 @@ class TestOnboardingBrowserSetup:
         result = flow.run()
 
         assert result is True
-        assert store.get("privacy") is True
-        assert store.get("terms") is True
+        assert store.get("privacy:1.0") is True
+        assert store.get("terms:1.0") is True
         assert len(launch_calls) == 1, "Browser launch must be called exactly once"
 
     def test_returning_user_skips_all_steps(self):
         """Both consents stored → run() returns True, no prompts issued."""
-        store = {"privacy": True, "terms": True}
+        store = {"privacy:1.0": True, "terms:1.0": True}
         prompts_issued: list[str] = []
 
         flow = OnboardingFlow(
             _print_fn=lambda _: None,
             _prompt_fn=lambda label: prompts_issued.append(label) or "",  # type: ignore[func-returns-value]
-            _has_consent_fn=lambda scope: store.get(scope, False),
-            _save_consent_fn=lambda scope: None,
+            _has_consent_fn=lambda scope, version: store.get(f"{scope}:{version}", False),
+            _save_consent_fn=lambda scope, version: None,
         )
 
         assert flow.run() is True

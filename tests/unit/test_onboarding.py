@@ -91,11 +91,11 @@ def _flow(
             return ""
         return _prompts.pop(0)
 
-    def _has_consent(scope: str) -> bool:
-        return _store.get(scope, False)
+    def _has_consent(scope: str, version: str) -> bool:
+        return _store.get(f"{scope}:{version}", False)
 
-    def _save_consent(scope: str) -> None:
-        _store[scope] = True
+    def _save_consent(scope: str, version: str) -> None:
+        _store[f"{scope}:{version}"] = True
 
     def _health() -> HealthReport:
         return _make_report(health_overall)
@@ -134,12 +134,12 @@ class TestIsFirstRun:
         assert flow.is_first_run() is True
 
     def test_only_privacy_is_first_run(self):
-        store = {"privacy": True}
+        store = {"privacy:1.0": True}
         flow = _flow(prompts=[], consent_store=store)
         assert flow.is_first_run() is True
 
     def test_both_consents_not_first_run(self):
-        store = {"privacy": True, "terms": True}
+        store = {"privacy:1.0": True, "terms:1.0": True}
         flow = _flow(prompts=[], consent_store=store)
         assert flow.is_first_run() is False
 
@@ -165,18 +165,18 @@ class TestRunHappyPath:
         result = flow.run()
 
         assert result is True
-        assert store.get("privacy") is True
-        assert store.get("terms") is True
+        assert store.get("privacy:1.0") is True
+        assert store.get("terms:1.0") is True
 
     def test_returning_user_skips_prompts(self):
         """Both consents already stored → run() returns True with no prompts."""
-        store = {"privacy": True, "terms": True}
+        store = {"privacy:1.0": True, "terms:1.0": True}
         prompt_calls: list[str] = []
         flow = OnboardingFlow(
             _print_fn=lambda _: None,
             _prompt_fn=lambda label: prompt_calls.append(label) or "",  # type: ignore[func-returns-value]
-            _has_consent_fn=lambda scope: store.get(scope, False),
-            _save_consent_fn=lambda scope: None,
+            _has_consent_fn=lambda scope, version: store.get(f"{scope}:{version}", False),
+            _save_consent_fn=lambda scope, version: None,
         )
         result = flow.run()
 
@@ -225,8 +225,8 @@ class TestCancellation:
             consent_store=store,
         )
         assert flow.run() is False
-        assert store.get("privacy") is True
-        assert "terms" not in store
+        assert store.get("privacy:1.0") is True
+        assert not any("terms" in k for k in store)
 
     def test_invalid_provider_choice_returns_false(self):
         flow = _flow(
@@ -285,8 +285,8 @@ class TestBrowserSetup:
         flow = OnboardingFlow(
             _print_fn=lambda _: None,
             _prompt_fn=lambda _: prompts.pop(0) if prompts else "",
-            _has_consent_fn=lambda _: False,
-            _save_consent_fn=lambda _: None,
+            _has_consent_fn=lambda _, __: False,
+            _save_consent_fn=lambda _, __: None,
             _health_check_fn=lambda: _make_report("ok"),
             _validate_key_fn=lambda p, k: (True, "ok"),
             _launch_browser_fn=_launch,
@@ -303,8 +303,8 @@ class TestBrowserSetup:
         flow = OnboardingFlow(
             _print_fn=lambda t: printed.append(t),
             _prompt_fn=lambda _: prompts.pop(0) if prompts else "",
-            _has_consent_fn=lambda _: False,
-            _save_consent_fn=lambda _: None,
+            _has_consent_fn=lambda _, __: False,
+            _save_consent_fn=lambda _, __: None,
             _health_check_fn=lambda: _make_report("ok"),
             _validate_key_fn=lambda p, k: (True, "ok"),
             _launch_browser_fn=lambda: True,
@@ -319,8 +319,8 @@ class TestBrowserSetup:
         flow = OnboardingFlow(
             _print_fn=lambda t: printed.append(t),
             _prompt_fn=lambda _: prompts.pop(0) if prompts else "",
-            _has_consent_fn=lambda _: False,
-            _save_consent_fn=lambda _: None,
+            _has_consent_fn=lambda _, __: False,
+            _save_consent_fn=lambda _, __: None,
             _health_check_fn=lambda: _make_report("ok"),
             _validate_key_fn=lambda p, k: (True, "ok"),
             _launch_browser_fn=lambda: False,
@@ -344,8 +344,8 @@ class TestConnectivity:
         OnboardingFlow(
             _print_fn=lambda t: printed.append(t),
             _prompt_fn=lambda _: prompts.pop(0) if prompts else "",
-            _has_consent_fn=lambda _: False,
-            _save_consent_fn=lambda _: None,
+            _has_consent_fn=lambda _, __: False,
+            _save_consent_fn=lambda _, __: None,
             _health_check_fn=lambda: _make_report("ok"),
             _validate_key_fn=lambda p, k: (True, "ok"),
             _launch_browser_fn=lambda: False,
@@ -379,5 +379,5 @@ class TestConsentPersistence:
         result = flow.run()
 
         assert result is True
-        assert store.get("privacy") is True, "privacy consent must be saved"
-        assert store.get("terms") is True, "terms consent must be saved"
+        assert store.get("privacy:1.0") is True, "privacy consent must be saved"
+        assert store.get("terms:1.0") is True, "terms consent must be saved"

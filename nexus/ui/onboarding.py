@@ -33,8 +33,8 @@ Injectable callables
 --------------------
 _print_fn        : (text: str) -> None
 _prompt_fn       : (label: str) -> str
-_has_consent_fn  : (scope: str) -> bool
-_save_consent_fn : (scope: str) -> None
+_has_consent_fn  : (scope: str, version: str) -> bool
+_save_consent_fn : (scope: str, version: str) -> None
 _health_check_fn : () -> HealthReport
 _validate_key_fn : (provider: str, key: str) -> tuple[bool, str]
 _launch_browser_fn: () -> bool
@@ -55,31 +55,37 @@ _log = get_logger(__name__)
 # ---------------------------------------------------------------------------
 
 _VERSION = "1.0"
+
+# Document version constants — bump when the corresponding docs/*.md file is updated.
+# Onboarding re-requests consent whenever the stored version differs from these.
+_PRIVACY_VERSION = "1.0"
+_TERMS_VERSION = "1.0"
+
 _PRIVACY_SUMMARY = """\
-Privacy Policy Summary (10 lines)
-──────────────────────────────────
-1. Nexus Agent runs entirely on your local machine.
-2. No screen data is sent to external servers without your consent.
-3. API calls to cloud providers (Anthropic, OpenAI) include only the
-   prompts you authorise; screenshots are never transmitted.
-4. API keys are stored encrypted in Windows Credential Manager.
-5. Usage telemetry is opt-in only and never includes personal data.
-6. Task history is stored in a local SQLite database you own.
-7. You can delete all stored data at any time with `nexus reset`.
-8. Nexus Agent does not create accounts or user profiles.
-9. Third-party provider privacy policies apply to API calls you make.
-10. This policy may be updated; you will be notified at next launch."""
+Gizlilik Politikasi Ozeti (docs/privacy_policy.md v1.0)
+--------------------------------------------------------
+1. Nexus Agent tamamen yerel makinenizde calisir.
+2. Native transport (UIA): ekran goruntusu GONDERILMEZ.
+3. Visual transport (mouse/klavye): yalnizca maskelenmis ekran
+   goruntusu gonderilir; hassas alanlar hicbir zaman gitmez.
+4. Hassas bolgeler (parola, odeme alanlari) HICBIR ZAMAN
+   islenmez veya iletilmez.
+5. API anahtarlari Windows Credential Manager'da sifreli saklanir.
+6. Gorev gecmisi yerel SQLite veritabaninda saklanir.
+7. Tum yerel verileri 'nexus reset --all' ile silebilirsiniz.
+8. Nexus Agent hesap olusturmaz veya kullanici profili tutmaz.
+9. KVKK kapsaminda bilgi, erisim, silme ve itirazhakkiniz vardir.
+10. Politika guncellendiginde yeniden onay istenir."""
 
 _TERMS_SUMMARY = """\
-Terms of Service Summary
-────────────────────────
-1. Nexus Agent is provided "as is" without warranty of any kind.
-2. You are responsible for all actions the agent takes on your machine.
-3. Do not use Nexus Agent to violate applicable laws or third-party ToS.
-4. API costs incurred via your credentials are your responsibility.
-5. The authors are not liable for data loss or system changes made by
-   the agent while operating under your direction.
-6. By using Nexus Agent you agree to the full Terms of Service."""
+Kullanim Kosullari Ozeti (docs/terms_of_service.md v1.0)
+---------------------------------------------------------
+1. Nexus Agent "oldugu gibi" sunulmaktadir; hicbir garanti verilmez.
+2. Ajanin makinenizde gerceklestirdigi tum eylemlerden siz sorumlusunuz.
+3. API maliyetleri (BYOK) dogrudan ilgili saglayici tarafindan tahsil edilir.
+4. Zarali faaliyet, gizlilik ihlali veya yetkisiz erisim icin kullanilamaz.
+5. Kritik altyapi sistemleri uzerinde yetkisiz otomasyon yasaktir.
+6. Bu kosullari kabul ederek tam Kullanim Kosullarini onaylamis olursunuz."""
 
 _FIRST_TASK_SUGGESTION = (
     'Try: "Open Notepad and type Hello, World!"'
@@ -126,9 +132,11 @@ class OnboardingFlow:
     _prompt_fn:
         Input function.  Default: ``input``.
     _has_consent_fn:
-        ``(scope: str) -> bool``.  True when *scope* consent is stored.
+        ``(scope: str, version: str) -> bool``.  True when *scope* consent
+        for the given *version* is stored.
     _save_consent_fn:
-        ``(scope: str) -> None``.  Persist consent for *scope*.
+        ``(scope: str, version: str) -> None``.  Persist consent for *scope*
+        and *version* so re-consent is requested when the version changes.
     _health_check_fn:
         ``() -> HealthReport``.  Run all system health checks.
     _validate_key_fn:
@@ -144,8 +152,8 @@ class OnboardingFlow:
         *,
         _print_fn: Callable[[str], None] | None = None,
         _prompt_fn: Callable[[str], str] | None = None,
-        _has_consent_fn: Callable[[str], bool] | None = None,
-        _save_consent_fn: Callable[[str], None] | None = None,
+        _has_consent_fn: Callable[[str, str], bool] | None = None,
+        _save_consent_fn: Callable[[str, str], None] | None = None,
         _health_check_fn: Callable[[], HealthReport] | None = None,
         _validate_key_fn: (
             Callable[[str, str], tuple[bool, str]] | None
@@ -157,8 +165,8 @@ class OnboardingFlow:
     ) -> None:
         self._print = _print_fn or print
         self._prompt = _prompt_fn or input
-        self._has_consent = _has_consent_fn or (lambda _scope: False)
-        self._save_consent = _save_consent_fn or (lambda _scope: None)
+        self._has_consent = _has_consent_fn or (lambda _scope, _ver: False)
+        self._save_consent = _save_consent_fn or (lambda _scope, _ver: None)
         self._health_check = _health_check_fn or _default_health_check
         self._validate_key = _validate_key_fn or _default_validate_key
         self._launch_browser = _launch_browser_fn or (lambda: False)
@@ -176,7 +184,8 @@ class OnboardingFlow:
         recorded; this returns False for them.
         """
         return not (
-            self._has_consent("privacy") and self._has_consent("terms")
+            self._has_consent("privacy", _PRIVACY_VERSION)
+            and self._has_consent("terms", _TERMS_VERSION)
         )
 
     def run(self) -> bool:
@@ -271,8 +280,8 @@ class OnboardingFlow:
         if answer.strip().lower() not in ("e", "evet", "y", "yes"):
             self._print("  Gizlilik politikası kabul edilmedi. Kurulum iptal.")
             return False
-        self._save_consent("privacy")
-        self._print("  Gizlilik politikası onayı kaydedildi.")
+        self._save_consent("privacy", _PRIVACY_VERSION)
+        self._print(f"  Gizlilik politikası onayı kaydedildi (v{_PRIVACY_VERSION}).")
         return True
 
     def _step_terms(self) -> bool:
@@ -286,8 +295,8 @@ class OnboardingFlow:
         if answer.strip().lower() not in ("e", "evet", "y", "yes"):
             self._print("  Kullanım koşulları kabul edilmedi. Kurulum iptal.")
             return False
-        self._save_consent("terms")
-        self._print("  Kullanım koşulları onayı kaydedildi.")
+        self._save_consent("terms", _TERMS_VERSION)
+        self._print(f"  Kullanım koşulları onayı kaydedildi (v{_TERMS_VERSION}).")
         return True
 
     def _step_api_key(self) -> tuple[str, str]:
