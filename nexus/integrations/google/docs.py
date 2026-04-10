@@ -25,7 +25,6 @@ from __future__ import annotations
 import json
 from collections.abc import Callable
 from typing import Any
-from urllib.request import Request, urlopen
 
 from nexus.infra.logger import get_logger
 
@@ -44,7 +43,7 @@ def _default_get(url: str, headers: dict[str, str]) -> dict[str, Any]:
 
     req = urllib.request.Request(url, headers=headers, method="GET")
     with urllib.request.urlopen(req, timeout=15) as resp:
-        return json.loads(resp.read())
+        return json.loads(resp.read())  # type: ignore[no-any-return]
 
 
 def _default_post(
@@ -55,7 +54,7 @@ def _default_post(
     data = json.dumps(body).encode()
     req = urllib.request.Request(url, data=data, headers=headers, method="POST")
     with urllib.request.urlopen(req, timeout=15) as resp:
-        return json.loads(resp.read())
+        return json.loads(resp.read())  # type: ignore[no-any-return]
 
 
 # ---------------------------------------------------------------------------

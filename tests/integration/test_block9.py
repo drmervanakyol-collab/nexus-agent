@@ -44,22 +44,18 @@ from datetime import date, datetime
 from typing import Any
 
 import numpy as np
-import pytest
 
 from nexus.core.screenshot_masker import ScreenshotMasker
-from nexus.core.task_executor import TaskResult, TransportStats
 from nexus.infra.cost_tracker import (
-    CostTracker,
     DashboardData,
     DayTotal,
     TaskCost,
     TransportBreakdown,
 )
-from nexus.infra.diagnostic import DiagnosticReporter, sanitize_settings
+from nexus.infra.diagnostic import DiagnosticReporter
 from nexus.infra.health import CheckResult, HealthReport
 from nexus.ui.cancel_handler import CancelHandler
-from nexus.ui.dashboard import SuspendedTask, TaskDashboard, TaskHistoryEntry
-from nexus.ui.notifications import NotificationManager
+from nexus.ui.dashboard import TaskDashboard
 from nexus.ui.onboarding import OnboardingFlow
 from nexus.ui.privacy import PrivacyTransparencyScreen
 

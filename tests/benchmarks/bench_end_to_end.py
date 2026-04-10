@@ -14,9 +14,7 @@ import time
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
-import numpy as np
 import pytest
-import pytest_asyncio
 
 from tests.benchmarks.conftest import BenchmarkRecord, make_frame, register_result
 

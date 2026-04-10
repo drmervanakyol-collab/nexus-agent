@@ -111,7 +111,7 @@ class TestAffordanceEnum:
 
     def test_all_required_members(self):
         names = {m.name for m in Affordance}
-        assert self._REQUIRED <= names
+        assert names >= self._REQUIRED
 
 
 # ---------------------------------------------------------------------------

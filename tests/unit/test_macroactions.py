@@ -20,7 +20,7 @@ Coverage
 """
 from __future__ import annotations
 
-import pytest
+import contextlib
 
 from nexus.action.macroactions import (
     GuardedSelectAndConfirm,
@@ -61,10 +61,8 @@ def _ocr_sequence(*values):
     last = [None]
 
     async def _read(coords):
-        try:
+        with contextlib.suppress(StopIteration):
             last[0] = next(it)
-        except StopIteration:
-            pass
         return last[0]
     return _read
 

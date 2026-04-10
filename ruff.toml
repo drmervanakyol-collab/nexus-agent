@@ -1,5 +1,27 @@
-line-length = 88
+line-length = 100
 target-version = "py311"
 
 [lint]
 select = ["E", "F", "I", "N", "UP", "B", "C4", "SIM"]
+
+[lint.per-file-ignores]
+# Tests have long assertion strings, local vars for readability, and intentional
+# pytest.raises patterns without a match message.
+"tests/**/*.py" = [
+    "E501",   # line too long — assertions and error messages are naturally verbose
+    "F841",   # local variable assigned but never used — common in test setup/teardown
+    "B017",   # pytest.raises(Exception) without match — intentional broad catches
+    "N806",   # variable in function should be lowercase — test constants/mocks
+    "N805",   # first argument of method should be 'self' — some test fixtures use cls
+    "E702",   # multiple statements on one line — compact test helpers
+    "T201",   # print found — some tests use print for debug context
+]
+# Session/conftest files use pytest plugin hooks with non-standard signatures.
+"tests/**/conftest.py" = ["N802"]
+# bench_report.py adds project root to sys.path before importing, so E402 is intentional.
+"tests/benchmarks/bench_report.py" = ["E402"]
+# test_dom_adapter.py uses Rect() as a default argument in a test helper — intentional.
+"tests/unit/test_dom_adapter.py" = ["B008"]
+
+# Windows platform constants are uppercase by convention (e.g. _ACCESS_DESKTOP).
+"nexus/capture/session_detector.py" = ["N806"]

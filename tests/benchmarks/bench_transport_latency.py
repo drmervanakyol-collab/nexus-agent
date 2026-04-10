@@ -18,7 +18,11 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from tests.benchmarks.conftest import BenchmarkRecord, make_source_result, register_result
+from tests.benchmarks.conftest import (
+    BenchmarkRecord,
+    make_source_result,
+    register_result,
+)
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -43,7 +47,7 @@ def _make_element_stub() -> Any:
 
 def _make_uia_resolver() -> Any:
     """TransportResolver with a fast synchronous UIA invoker (no fallback)."""
-    from nexus.core.settings import NexusSettings, TransportSettings
+    from nexus.core.settings import NexusSettings
     from nexus.source.transport.resolver import TransportResolver
 
     settings = NexusSettings()
@@ -59,7 +63,6 @@ def _make_uia_resolver() -> Any:
 
 def _make_mouse_resolver() -> Any:
     """TransportResolver that forces the OS/mouse fallback (prefer_native=False)."""
-    import asyncio
 
     from unittest.mock import MagicMock
 

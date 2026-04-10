@@ -18,9 +18,6 @@ Sections:
 """
 from __future__ import annotations
 
-import time
-from typing import Sequence
-
 import cv2
 import numpy as np
 import pytest
@@ -172,7 +169,7 @@ class TestElementTypeEnum:
 
     def test_all_required_members_present(self):
         names = {m.name for m in ElementType}
-        assert self._REQUIRED <= names
+        assert names >= self._REQUIRED
 
 
 # ---------------------------------------------------------------------------

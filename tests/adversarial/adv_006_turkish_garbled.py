@@ -17,13 +17,11 @@ All I/O is injected — no real Tesseract subprocess.
 from __future__ import annotations
 
 from typing import Any
-from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
 
 from nexus.perception.reader.ocr_engine import TesseractOCREngine
-
 
 # ---------------------------------------------------------------------------
 # Helpers

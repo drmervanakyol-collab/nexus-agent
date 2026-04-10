@@ -15,11 +15,8 @@ Coverage
 """
 from __future__ import annotations
 
-from collections.abc import Sequence
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
-import numpy as np
 import pytest
 
 from nexus.cloud.planner import PlannerDecision
@@ -27,19 +24,18 @@ from nexus.core.errors import CloudError
 from nexus.core.policy import PolicyResult
 from nexus.decision.ambiguity_scorer import AmbiguityScore
 from nexus.decision.engine import (
+    _ANTI_LOOP_WINDOW,
+    _HARD_STUCK_WINDOW,
     Decision,
     DecisionContext,
     DecisionEngine,
     LocalResolver,
     TargetSpec,
-    _ANTI_LOOP_WINDOW,
-    _HARD_STUCK_WINDOW,
     _is_anti_loop,
     _is_hard_stuck,
     _transport_from_source,
 )
 from nexus.infra.cost_tracker import AlertResult
-
 
 # ---------------------------------------------------------------------------
 # Shared helpers / factories

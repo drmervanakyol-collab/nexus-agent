@@ -33,7 +33,6 @@ from nexus.action.registry import ActionSpec
 from nexus.core.settings import NexusSettings
 from nexus.source.dom.adapter import DOMAdapter
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

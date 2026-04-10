@@ -6,14 +6,11 @@ import threading
 import pytest
 
 from nexus.infra.telemetry import (
-    ActionRecord,
-    CloudCallRecord,
     PhaseRecord,
     TaskTelemetry,
     TelemetryCollector,
     TransportRecord,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers

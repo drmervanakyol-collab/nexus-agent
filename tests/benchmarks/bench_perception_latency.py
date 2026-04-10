@@ -9,12 +9,10 @@ Target: average perception latency < 500 ms over 50 frames.
 """
 from __future__ import annotations
 
-import asyncio
 import time
 from typing import Any
 from unittest.mock import MagicMock
 
-import numpy as np
 import pytest
 
 from tests.benchmarks.conftest import (
@@ -40,7 +38,6 @@ _TARGET_AVG_MS: float = 500.0
 def _make_orchestrator() -> Any:
     """Build a PerceptionOrchestrator with fully mocked sub-components."""
     from nexus.perception.arbitration.arbitrator import (
-        ArbitrationResult,
         PerceptionArbitrator,
     )
     from nexus.perception.locator.locator import Locator
@@ -48,8 +45,6 @@ def _make_orchestrator() -> Any:
     from nexus.perception.orchestrator import PerceptionOrchestrator
     from nexus.perception.reader.ocr_engine import OCREngine
     from nexus.perception.temporal.temporal_expert import (
-        ScreenState,
-        StateType,
         TemporalExpert,
     )
 

@@ -10,16 +10,17 @@ Target: average decision latency < 200 ms over 100 iterations.
 """
 from __future__ import annotations
 
-import asyncio
 import datetime
 import time
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
-import numpy as np
 import pytest
 
-from tests.benchmarks.conftest import BenchmarkRecord, make_frame, make_source_result, register_result
+from tests.benchmarks.conftest import (
+    BenchmarkRecord,
+    register_result,
+)
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -67,7 +68,7 @@ def _make_perception_result(seq: int = 1) -> Any:
         ),
         perception_ms=0.1,
         frame_sequence=seq,
-        timestamp=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        timestamp=datetime.datetime.now(datetime.UTC).isoformat(),
     )
 
 
@@ -142,7 +143,6 @@ async def test_bench_decision_latency() -> None:
     decision pipeline overhead (policy check, scorer, resolver wiring)
     without any cloud calls.
     """
-    from nexus.cloud.prompt_builder import ActionRecord
     from nexus.decision.engine import DecisionContext
 
     engine = _make_engine()

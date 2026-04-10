@@ -120,11 +120,11 @@ def _default_ocr(frame: Frame) -> str:
     Uses --psm 11 (sparse text) to find text anywhere on the screen.
     """
     try:
-        import pytesseract  # type: ignore[import-untyped]
+        import pytesseract
         from PIL import Image  # lazy import
 
         img = Image.fromarray(frame.data, mode="RGB")
-        return pytesseract.image_to_string(
+        return pytesseract.image_to_string(  # type: ignore[no-any-return]
             img,
             lang="eng+tur",
             config="--psm 11",

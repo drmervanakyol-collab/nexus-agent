@@ -23,10 +23,10 @@ import numpy as np
 import pytest
 
 from nexus.capture.capture_worker import (
-    CaptureWorkerClient,
-    CaptureWorkerProcess,
     _SHM_HEADER_SIZE,
     _SHM_TOTAL_SIZE,
+    CaptureWorkerClient,
+    CaptureWorkerProcess,
     read_shm_frame,
     write_shm_frame,
 )

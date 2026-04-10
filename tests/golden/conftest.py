@@ -11,13 +11,12 @@ Set NEXUS_GOLDEN_TESTS=1 (or run `make golden`) to enable execution.
 from __future__ import annotations
 
 import os
-import time
 from dataclasses import dataclass, field
 from typing import Any
 
 import pytest
 
-from nexus.core.task_executor import TaskResult, TransportStats
+from nexus.core.task_executor import TaskResult
 
 # ---------------------------------------------------------------------------
 # Auto-skip: CI or missing opt-in flag

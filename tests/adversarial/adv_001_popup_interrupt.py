@@ -22,7 +22,6 @@ import pytest
 from nexus.perception.locator.locator import ElementType
 from nexus.skills.desktop.modal_handler import ModalChainHandler
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -30,7 +29,7 @@ from nexus.skills.desktop.modal_handler import ModalChainHandler
 
 def _node(element_type: ElementType, text: str, x: int = 0, y: int = 0):
     """Build a MagicMock SpatialNode with the given type and text."""
-    from nexus.core.types import Point, Rect
+    from nexus.core.types import Rect
 
     node = MagicMock()
     node.element.element_type = element_type

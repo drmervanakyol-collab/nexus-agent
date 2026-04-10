@@ -11,7 +11,6 @@ from nexus.core.types import TaskId, TraceId
 from nexus.infra.logger import configure_logging, get_logger
 from nexus.infra.trace import traced
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -146,7 +145,6 @@ class TestLoggerTraceInjection:
 
 class TestGetLogger:
     def test_returns_bound_logger(self) -> None:
-        import structlog
         log = get_logger("nexus.test")
         assert hasattr(log, "info")
         assert hasattr(log, "warning")

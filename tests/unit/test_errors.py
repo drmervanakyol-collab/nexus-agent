@@ -15,8 +15,8 @@ from nexus.core.errors import (
     CloudUnavailableError,
     DecisionError,
     DOMError,
-    FileAdapterError,
     FalsePositiveError,
+    FileAdapterError,
     FrozenScreenError,
     InvalidAPIKeyError,
     LocatorError,
@@ -38,7 +38,6 @@ from nexus.core.errors import (
     VerificationError,
     VerificationPolicyError,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers

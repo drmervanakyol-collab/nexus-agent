@@ -18,7 +18,6 @@ Sections:
 """
 from __future__ import annotations
 
-import time
 from collections.abc import Callable
 
 import numpy as np
@@ -26,17 +25,19 @@ import pytest
 
 from nexus.capture.frame import Frame
 from nexus.capture.orchestrator import (
+    _DEFAULT_MAX_MEMORY_BYTES,
     CaptureOrchestrator,
     StableFrame,
-    _DEFAULT_MAX_MEMORY_BYTES,
 )
 from nexus.capture.session_detector import (
     FrozenScreenError as _LocalFrozenScreenError,
+)
+from nexus.capture.session_detector import (
     SessionDetector,
     SessionInfo,
     SessionType,
 )
-from nexus.capture.stabilization import StabilizationGate, StabilizationResult
+from nexus.capture.stabilization import StabilizationResult
 from nexus.core.errors import CaptureError, FrozenScreenError, PolicyBlockedError
 from nexus.core.settings import CaptureSettings
 

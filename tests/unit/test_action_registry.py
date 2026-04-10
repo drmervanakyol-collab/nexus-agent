@@ -11,15 +11,12 @@ Coverage
 """
 from __future__ import annotations
 
-import pytest
-
 from nexus.action.registry import (
     ActionHandler,
     ActionRegistry,
     ActionResult,
     ActionSpec,
 )
-
 
 # ---------------------------------------------------------------------------
 # Concrete handler for tests

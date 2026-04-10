@@ -20,8 +20,8 @@ fully testable without real hardware.
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Any
 
 from nexus.capture.dirty_region import DirtyRegionDetector, DirtyRegions
@@ -30,9 +30,11 @@ from nexus.capture.session_detector import (
     CaptureDecision,
     CapturePolicy,
     FrozenFrameWatchdog,
-    FrozenScreenError as _LocalFrozenScreenError,
     SessionDetector,
     SessionInfo,
+)
+from nexus.capture.session_detector import (
+    FrozenScreenError as _LocalFrozenScreenError,
 )
 from nexus.capture.stabilization import StabilizationGate, StabilizationResult
 from nexus.core.errors import (
@@ -57,13 +59,13 @@ def _default_memory_bytes() -> int:
     try:
         import psutil  # type: ignore[import-untyped]
 
-        return psutil.Process().memory_info().rss
+        return psutil.Process().memory_info().rss  # type: ignore[no-any-return]
     except Exception:
         return 0
 
 
 def _utc_iso_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 # ---------------------------------------------------------------------------

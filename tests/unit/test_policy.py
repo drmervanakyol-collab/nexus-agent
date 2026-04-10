@@ -27,9 +27,8 @@ from nexus.core.policy import (
 )
 from nexus.core.screenshot_masker import MaskingResult, ScreenshotMasker
 from nexus.core.sensitive_regions import SensitiveRegion, SensitiveRegionDetector
-from nexus.core.settings import NexusSettings, SafetySettings, BudgetSettings
+from nexus.core.settings import BudgetSettings, NexusSettings, SafetySettings
 from nexus.core.types import Point, Rect
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -57,16 +56,16 @@ def _settings(
 
 
 def _ctx(**kwargs) -> ActionContext:  # type: ignore[type-arg]
-    defaults = dict(
-        action_type="click",
-        transport="mouse",
-        is_destructive=False,
-        target_rect=None,
-        actions_so_far=0,
-        elapsed_seconds=0.0,
-        task_cost_usd=0.0,
-        daily_cost_usd=0.0,
-    )
+    defaults = {
+        "action_type": "click",
+        "transport": "mouse",
+        "is_destructive": False,
+        "target_rect": None,
+        "actions_so_far": 0,
+        "elapsed_seconds": 0.0,
+        "task_cost_usd": 0.0,
+        "daily_cost_usd": 0.0,
+    }
     defaults.update(kwargs)
     return ActionContext(**defaults)
 

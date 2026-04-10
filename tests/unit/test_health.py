@@ -13,8 +13,8 @@ import pytest
 
 import nexus.infra.health as health_mod
 from nexus.infra.health import (
-    CHECK_DB_ACCESSIBLE,
     CHECK_CREDENTIAL_MANAGER,
+    CHECK_DB_ACCESSIBLE,
     CHECK_DISK_SPACE,
     CHECK_DPI_AWARENESS,
     CHECK_DXCAM,
@@ -27,7 +27,6 @@ from nexus.infra.health import (
     HealthChecker,
     HealthReport,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -475,7 +474,7 @@ class TestRunAll:
         self._patch_all_ok(monkeypatch)
         report = _checker().run_all()
         names = {r.name for r in report.checks}
-        assert self._EXPECTED_CHECKS == names
+        assert names == self._EXPECTED_CHECKS
 
     def test_all_ok_when_all_pass(self, monkeypatch: pytest.MonkeyPatch) -> None:
         self._patch_all_ok(monkeypatch)

@@ -33,9 +33,9 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from nexus.decision.ambiguity_scorer import (
+    _WEIGHTS,
     AmbiguityScore,
     AmbiguityScorer,
-    _WEIGHTS,
     _compute_weighted_score,
     _dominant_factor,
     _is_stuck,
@@ -163,27 +163,27 @@ class TestWeights:
 
 class TestComputeWeightedScore:
     def test_all_zeros_gives_zero(self) -> None:
-        factors = {k: 0.0 for k in _WEIGHTS}
+        factors = dict.fromkeys(_WEIGHTS, 0.0)
         assert _compute_weighted_score(factors, _WEIGHTS) == pytest.approx(0.0)
 
     def test_all_ones_gives_one(self) -> None:
-        factors = {k: 1.0 for k in _WEIGHTS}
+        factors = dict.fromkeys(_WEIGHTS, 1.0)
         assert _compute_weighted_score(factors, _WEIGHTS) == pytest.approx(1.0)
 
     def test_single_factor_weight(self) -> None:
         # Only action_risk = 1.0, everything else 0
-        factors = {k: 0.0 for k in _WEIGHTS}
+        factors = dict.fromkeys(_WEIGHTS, 0.0)
         factors["action_risk"] = 1.0
         score = _compute_weighted_score(factors, _WEIGHTS)
         assert score == pytest.approx(0.20)
 
     def test_clamp_prevents_above_one(self) -> None:
         # Even if factors somehow exceed 1.0, output is clamped
-        factors = {k: 2.0 for k in _WEIGHTS}
+        factors = dict.fromkeys(_WEIGHTS, 2.0)
         assert _compute_weighted_score(factors, _WEIGHTS) <= 1.0
 
     def test_clamp_prevents_below_zero(self) -> None:
-        factors = {k: -1.0 for k in _WEIGHTS}
+        factors = dict.fromkeys(_WEIGHTS, -1.0)
         assert _compute_weighted_score(factors, _WEIGHTS) >= 0.0
 
 
@@ -459,14 +459,14 @@ class TestRecommendationDecisions:
 
 class TestDominantFactor:
     def test_all_zero_except_action_risk(self) -> None:
-        factors = {k: 0.0 for k in _WEIGHTS}
+        factors = dict.fromkeys(_WEIGHTS, 0.0)
         factors["action_risk"] = 1.0
         dominant = _dominant_factor(factors, _WEIGHTS)
         assert dominant == "action_risk"
 
     def test_dominant_with_high_overall_confidence(self) -> None:
         """overall_confidence=1.0 with weight 0.20 → dominant."""
-        factors = {k: 0.0 for k in _WEIGHTS}
+        factors = dict.fromkeys(_WEIGHTS, 0.0)
         factors["overall_confidence"] = 1.0
         dominant = _dominant_factor(factors, _WEIGHTS)
         assert dominant == "overall_confidence"
@@ -480,7 +480,7 @@ class TestDominantFactor:
 
     def test_stuck_is_dominant_when_highest(self) -> None:
         """stuck_indicator × 0.15 with everything else 0 → dominant."""
-        factors = {k: 0.0 for k in _WEIGHTS}
+        factors = dict.fromkeys(_WEIGHTS, 0.0)
         factors["stuck_indicator"] = 1.0
         dominant = _dominant_factor(factors, _WEIGHTS)
         assert dominant == "stuck_indicator"

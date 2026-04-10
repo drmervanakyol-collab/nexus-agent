@@ -21,7 +21,6 @@ import pytest
 from nexus.cloud.prompt_builder import ActionRecord
 from nexus.decision.engine import _is_anti_loop
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

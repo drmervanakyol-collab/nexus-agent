@@ -9,4 +9,3 @@ network, or hardware calls.
 """
 from __future__ import annotations
 
-import pytest

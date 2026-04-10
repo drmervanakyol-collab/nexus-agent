@@ -38,6 +38,7 @@ dev = [
     "factory-boy",
     "bandit",
     "safety",
+    "vulture",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -62,3 +63,31 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = ["pytesseract", "pdf2image", "openpyxl", "pypdf"]
 ignore_missing_imports = true
+
+[tool.coverage.run]
+source = ["nexus"]
+branch = true
+omit = [
+    "nexus/scripts/*",
+    "nexus/release/*",
+    "nexus/ui/*",
+    "nexus/integrations/*",
+    "*/__pycache__/*",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+fail_under = 80
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+    "@(abc\\.)?abstractmethod",
+    "\\.\\.\\.\\s*$",
+]
+
+[tool.coverage.json]
+output = "coverage.json"
+pretty_print = true

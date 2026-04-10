@@ -41,8 +41,6 @@ Consent persistence:
 """
 from __future__ import annotations
 
-import pytest
-
 from nexus.infra.health import CheckResult, HealthReport
 from nexus.ui.onboarding import OnboardingFlow
 

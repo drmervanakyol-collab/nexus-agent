@@ -20,8 +20,6 @@ Sections:
 from __future__ import annotations
 
 import uuid
-from collections.abc import Callable
-from typing import Any
 
 import numpy as np
 import pytest

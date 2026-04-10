@@ -28,11 +28,12 @@ they are returned with a structured-log warning at WARNING level.
 """
 from __future__ import annotations
 
+import contextlib
 import subprocess
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 import cv2
 import numpy as np
@@ -189,10 +190,8 @@ def _default_run_tesseract(
         return result.stdout
 
     finally:
-        try:
+        with contextlib.suppress(OSError):
             os.unlink(tmp_path)
-        except OSError:
-            pass
 
 
 # ---------------------------------------------------------------------------
@@ -205,7 +204,7 @@ def _detect_language(text: str) -> str:
     try:
         from langdetect import detect  # type: ignore[import-untyped]
 
-        return detect(text)
+        return detect(text)  # type: ignore[no-any-return]
     except Exception:
         return "unknown"
 
@@ -346,9 +345,9 @@ class TesseractOCREngine:
         if img.ndim == 2:
             gray = img
         elif img.ndim == 3 and img.shape[2] == 4:
-            gray = cv2.cvtColor(img, cv2.COLOR_BGRA2GRAY)
+            gray = cv2.cvtColor(img, cv2.COLOR_BGRA2GRAY)  # type: ignore[assignment]
         elif img.ndim == 3 and img.shape[2] == 3:
-            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)  # type: ignore[assignment]
         elif img.ndim == 3 and img.shape[2] == 1:
             gray = img[:, :, 0]
         else:
@@ -360,10 +359,10 @@ class TesseractOCREngine:
             clipLimit=_CLAHE_CLIP_LIMIT,
             tileGridSize=_CLAHE_TILE,
         )
-        gray = clahe.apply(gray)
+        gray = clahe.apply(gray)  # type: ignore[assignment]
 
         # Gaussian denoise
-        gray = cv2.GaussianBlur(gray, _GAUSSIAN_KERNEL, 0)
+        gray = cv2.GaussianBlur(gray, _GAUSSIAN_KERNEL, 0)  # type: ignore[assignment]
 
         # DPI-aware upscale (target: 300 DPI)
         if self._dpi < _TARGET_DPI:
@@ -371,7 +370,7 @@ class TesseractOCREngine:
             h, w = gray.shape[:2]
             new_w = max(1, int(w * scale))
             new_h = max(1, int(h * scale))
-            gray = cv2.resize(
+            gray = cv2.resize(  # type: ignore[assignment]
                 gray, (new_w, new_h), interpolation=cv2.INTER_CUBIC
             )
 

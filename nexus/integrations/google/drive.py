@@ -27,7 +27,6 @@ _read_file_fn: (path: str) -> bytes
 from __future__ import annotations
 
 import json
-import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -67,7 +66,7 @@ def _default_get(url: str, headers: dict[str, str]) -> dict[str, Any]:
 
     req = urllib.request.Request(url, headers=headers, method="GET")
     with urllib.request.urlopen(req, timeout=15) as resp:
-        return json.loads(resp.read())
+        return json.loads(resp.read())  # type: ignore[no-any-return]
 
 
 def _default_download(url: str, headers: dict[str, str]) -> bytes:
@@ -75,7 +74,7 @@ def _default_download(url: str, headers: dict[str, str]) -> bytes:
 
     req = urllib.request.Request(url, headers=headers, method="GET")
     with urllib.request.urlopen(req, timeout=60) as resp:
-        return resp.read()
+        return resp.read()  # type: ignore[no-any-return]
 
 
 def _default_post(
@@ -86,7 +85,7 @@ def _default_post(
     data = json.dumps(body).encode()
     req = urllib.request.Request(url, data=data, headers=headers, method="POST")
     with urllib.request.urlopen(req, timeout=30) as resp:
-        return json.loads(resp.read())
+        return json.loads(resp.read())  # type: ignore[no-any-return]
 
 
 def _default_read_file(path: str) -> bytes:

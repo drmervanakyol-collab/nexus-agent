@@ -17,14 +17,12 @@ Invariants tested
 """
 from __future__ import annotations
 
-import asyncio
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from hypothesis import given, settings
+from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
-from hypothesis import HealthCheck
 
 from nexus.core.settings import NexusSettings, TransportSettings
 from nexus.core.types import Rect

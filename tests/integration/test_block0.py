@@ -15,8 +15,7 @@ from __future__ import annotations
 import io
 import json
 import logging
-import tempfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -302,11 +301,11 @@ class TestPolicyAndBudget:
             ),
         )
         engine = PolicyEngine(s)
-        tracker = CostTracker(s, clock=lambda: datetime.now(timezone.utc))
+        tracker = CostTracker(s, clock=lambda: datetime.now(UTC))
         return engine, tracker, s
 
     def test_budget_block_triggers_policy(self) -> None:
-        from nexus.core.policy import ActionContext, RULE_TASK_BUDGET
+        from nexus.core.policy import RULE_TASK_BUDGET, ActionContext
 
         engine, tracker, s = self._make_engine_and_tracker(max_task=0.01)
         # Spend more than the cap
@@ -599,11 +598,11 @@ class TestNativeActionPolicyBlock:
             )
             result = engine.check_action(ctx)
             assert result.verdict == "allow", (
-                f"Non-destructive native in dry-run should be allowed"
+                "Non-destructive native in dry-run should be allowed"
             )
 
     def test_live_mode_native_destructive_warns(self) -> None:
-        from nexus.core.policy import ActionContext, RULE_NATIVE_ACTION_SAFETY
+        from nexus.core.policy import RULE_NATIVE_ACTION_SAFETY, ActionContext
 
         engine = self._live_engine()
         for transport in ("uia", "dom", "file"):
@@ -629,7 +628,7 @@ class TestNativeActionPolicyBlock:
         assert result.verdict == "allow"
 
     def test_dry_run_fallback_destructive_is_blocked(self) -> None:
-        from nexus.core.policy import ActionContext, RULE_DRY_RUN
+        from nexus.core.policy import RULE_DRY_RUN, ActionContext
 
         engine = self._dry_run_engine()
         ctx = ActionContext(

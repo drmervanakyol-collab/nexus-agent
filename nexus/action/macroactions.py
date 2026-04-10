@@ -444,7 +444,7 @@ class SafeRowWrite:
         _log.debug(
             "identity_check_failed",
             expected=expected,
-            actual=actual,  # type: ignore[possibly-undefined]
+            actual=actual,
         )
         return False
 

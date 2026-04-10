@@ -30,7 +30,6 @@ from nexus.infra.database import Database
 from nexus.source.resolver import SourceResult
 from nexus.source.transport.resolver import TransportResult
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------

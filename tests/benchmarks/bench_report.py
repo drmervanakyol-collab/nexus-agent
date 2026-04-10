@@ -23,8 +23,7 @@ import json
 import os
 import shutil
 import sys
-import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -33,7 +32,7 @@ _ROOT = Path(__file__).parent.parent.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-from tests.benchmarks.conftest import RESULTS_DIR, get_all_results, BenchmarkRecord
+from tests.benchmarks.conftest import RESULTS_DIR, BenchmarkRecord, get_all_results
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -69,7 +68,7 @@ def _is_regression(record: BenchmarkRecord, baseline_value: float) -> bool:
 
 
 def _build_report(records: list[BenchmarkRecord]) -> dict[str, Any]:
-    ts = datetime.now(timezone.utc).isoformat()
+    ts = datetime.now(UTC).isoformat()
     return {
         "generated_at": ts,
         "all_passed": all(r.passed for r in records),
@@ -205,7 +204,7 @@ def write_report() -> Path:
         print()
 
     # Write files
-    ts = datetime.now(timezone.utc).strftime(_TIMESTAMP_FMT)
+    ts = datetime.now(UTC).strftime(_TIMESTAMP_FMT)
     json_path = RESULTS_DIR / f"bench_{ts}.json"
     md_path = RESULTS_DIR / f"bench_{ts}.md"
     latest_path = RESULTS_DIR / "bench_latest.json"

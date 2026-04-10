@@ -39,7 +39,7 @@ class TestCostTracking:
         # ------------------------------------------------------------------
         # Setup
         # ------------------------------------------------------------------
-        from nexus.core.settings import BudgetSettings, NexusSettings
+        from nexus.core.settings import NexusSettings
         from nexus.infra.cost_tracker import CostTracker
 
         settings = NexusSettings()

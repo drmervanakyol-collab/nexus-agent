@@ -149,10 +149,7 @@ class NotificationManager:
         limit:
             Configured budget cap (USD).
         """
-        if limit > 0:
-            pct = current / limit * 100
-        else:
-            pct = 100.0
+        pct = current / limit * 100 if limit > 0 else 100.0
 
         self._print(f"\n  {_BORDER}")
         self._print("  [!] BÜTÇE UYARISI")
@@ -200,9 +197,6 @@ def _truncate(text: str, max_len: int) -> str:
 
 def _budget_bar(current: float, limit: float, width: int = 40) -> str:
     """ASCII spend bar: filled portion = current / limit."""
-    if limit <= 0:
-        ratio = 1.0
-    else:
-        ratio = min(current / limit, 1.0)
+    ratio = 1.0 if limit <= 0 else min(current / limit, 1.0)
     filled = round(ratio * width)
     return "█" * filled + "░" * (width - filled)

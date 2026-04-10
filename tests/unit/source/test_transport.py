@@ -20,7 +20,7 @@ Coverage targets
 from __future__ import annotations
 
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, call
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -29,8 +29,11 @@ from nexus.core.settings import NexusSettings
 from nexus.core.types import Rect
 from nexus.source.resolver import SourceResult
 from nexus.source.transport.fallback import KeyboardTransport, MouseTransport
-from nexus.source.transport.resolver import ActionSpec, TransportResolver, TransportResult
-
+from nexus.source.transport.resolver import (
+    ActionSpec,
+    TransportResolver,
+    TransportResult,
+)
 
 # ---------------------------------------------------------------------------
 # Helpers

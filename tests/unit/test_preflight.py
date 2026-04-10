@@ -30,12 +30,11 @@ from nexus.action.preflight import (
     CHECK_TRANSPORT_AVAILABLE,
     PreflightChecker,
     PreflightContext,
-    PreflightResult,
 )
 from nexus.action.registry import ActionSpec
 from nexus.core.policy import PolicyEngine, PolicyResult
 from nexus.core.sensitive_regions import SensitiveRegion, SensitiveRegionDetector
-from nexus.core.settings import NexusSettings, SafetySettings
+from nexus.core.settings import NexusSettings
 from nexus.core.types import Rect
 
 # ---------------------------------------------------------------------------

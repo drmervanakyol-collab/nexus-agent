@@ -417,11 +417,11 @@ class TaskExecutor:
                     if not pf_result.passed:
                         _log.warning(
                             "task_executor.preflight_failed",
-                            check=pf_result.check_name,
-                            msg=pf_result.message,
+                            check=pf_result.failed_check,
+                            msg=pf_result.reason,
                         )
                         ctx.status = "failed"
-                        error = f"Preflight failed: {pf_result.check_name}"
+                        error = f"Preflight failed: {pf_result.failed_check}"
                         break
 
                 # 8. Transport execute
@@ -561,7 +561,7 @@ class TaskExecutor:
             ctx.status = "failed"
             error = str(exc)
 
-        if self._cancelled and ctx.status == "running":
+        if self._cancelled and ctx.status == "running":  # type: ignore[comparison-overlap]
             ctx.status = "cancelled"
 
         duration_ms = (time.monotonic() - ctx.started_at) * 1000.0

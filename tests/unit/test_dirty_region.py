@@ -20,13 +20,13 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 from hypothesis.extra.numpy import arrays
 
-from nexus.capture.frame import Frame
 from nexus.capture.dirty_region import (
     BLOCK_SIZE,
     FULL_REFRESH_THRESHOLD,
     DirtyRegionDetector,
     DirtyRegions,
 )
+from nexus.capture.frame import Frame
 from nexus.core.types import Rect
 
 # ---------------------------------------------------------------------------

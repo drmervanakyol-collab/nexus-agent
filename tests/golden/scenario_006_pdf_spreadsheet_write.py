@@ -82,7 +82,10 @@ class TestPdfSpreadsheetWrite:
 
         import pypdf
 
-        from nexus.action.macroactions import MacroActionResult, SafeFieldReplace, SafeRowWrite
+        from nexus.action.macroactions import (
+            SafeFieldReplace,
+            SafeRowWrite,
+        )
 
         # ------------------------------------------------------------------
         # Step 1: Extract text from PDF invoice

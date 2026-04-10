@@ -27,7 +27,6 @@ import asyncio
 import uuid
 from collections.abc import Sequence
 from typing import Any
-from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
@@ -35,18 +34,23 @@ import pytest
 from nexus.capture.frame import Frame
 from nexus.core.errors import ArbitrationError
 from nexus.core.types import ElementId, Rect
-from nexus.perception.arbitration.arbitrator import ArbitrationResult, PerceptionArbitrator
-from nexus.perception.locator.locator import ElementType, Locator, UIElement
-from nexus.perception.matcher.matcher import Affordance, Matcher, SemanticLabel
+from nexus.perception.arbitration.arbitrator import (
+    ArbitrationResult,
+)
+from nexus.perception.locator.locator import ElementType, UIElement
+from nexus.perception.matcher.matcher import Affordance, SemanticLabel
 from nexus.perception.orchestrator import (
     PerceptionOrchestrator,
     PerceptionResult,
     _build_element_texts,
 )
-from nexus.perception.reader.ocr_engine import OCREngine, OCRResult
+from nexus.perception.reader.ocr_engine import OCRResult
 from nexus.perception.reader.reader import ReaderOutput
 from nexus.perception.spatial_graph import SpatialGraph
-from nexus.perception.temporal.temporal_expert import ScreenState, StateType, TemporalExpert
+from nexus.perception.temporal.temporal_expert import (
+    ScreenState,
+    StateType,
+)
 from nexus.source.resolver import SourceResult
 
 # ---------------------------------------------------------------------------

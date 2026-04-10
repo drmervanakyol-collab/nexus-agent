@@ -16,14 +16,15 @@ No real I/O, DB, or hardware.
 from __future__ import annotations
 
 import gc
-import tracemalloc
 import time
-from typing import Any
+import tracemalloc
 
 import numpy as np
-import pytest
 
-from tests.benchmarks.conftest import BenchmarkRecord, make_frame, make_source_result, register_result
+from tests.benchmarks.conftest import (
+    BenchmarkRecord,
+    register_result,
+)
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -58,7 +59,7 @@ def _one_cycle(seq: int) -> None:
         width=8,
         height=8,
         captured_at_monotonic=time.monotonic(),
-        captured_at_utc=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        captured_at_utc=datetime.datetime.now(datetime.UTC).isoformat(),
         sequence_number=seq,
     )
 

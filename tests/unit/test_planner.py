@@ -22,10 +22,9 @@ Coverage
 """
 from __future__ import annotations
 
-import base64
 import json
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import numpy as np
 import pytest
@@ -38,10 +37,10 @@ from nexus.cloud.planner import (
     _try_parse,
 )
 from nexus.cloud.prompt_builder import (
+    _SCREENSHOT_TOKEN_ESTIMATE,
     ActionRecord,
     BuiltPrompt,
     PromptBuilder,
-    _SCREENSHOT_TOKEN_ESTIMATE,
     _encode_screenshot,
     _estimate_tokens,
 )
@@ -375,8 +374,9 @@ class TestSensitiveRegionMasking:
         masked = _encode_screenshot(screenshot, sensitive)
 
         # Decode back and check the masked region
-        from PIL import Image
         import io
+
+        from PIL import Image
         img = Image.open(io.BytesIO(masked))
         arr = np.asarray(img.convert("RGB"), dtype=np.uint8)
         # Region must be black
@@ -391,8 +391,9 @@ class TestSensitiveRegionMasking:
 
         masked_bytes = _encode_screenshot(screenshot, sensitive)
 
-        from PIL import Image
         import io
+
+        from PIL import Image
         img = Image.open(io.BytesIO(masked_bytes))
         arr = np.asarray(img.convert("RGB"), dtype=np.uint8)
         # Pixel outside the rect should be ~200 (may differ slightly due to resize)
@@ -422,8 +423,9 @@ class TestSensitiveRegionMasking:
         assert result.screenshot_included is True
         assert result.messages[1].image is not None
         # Decode and verify the masked region
-        from PIL import Image
         import io
+
+        from PIL import Image
         img = Image.open(io.BytesIO(result.messages[1].image))
         arr = np.asarray(img.convert("RGB"), dtype=np.uint8)
         # After resize to max 512 the 100x100 image stays 100x100

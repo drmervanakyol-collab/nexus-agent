@@ -17,14 +17,13 @@ from __future__ import annotations
 
 import json
 import sys
-from pathlib import Path
 
 from nexus.core.settings import NexusSettings
 from nexus.infra.diagnostic import DiagnosticReporter
 
 
-def _settings_dict(settings: NexusSettings) -> dict:
-    return json.loads(settings.model_dump_json())
+def _settings_dict(settings: NexusSettings) -> dict[str, object]:
+    return json.loads(settings.model_dump_json())  # type: ignore[no-any-return]
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -9,7 +9,6 @@ import pytest
 from nexus.core.types import TaskId, TraceId
 from nexus.infra.trace import TraceContext, async_traced, traced
 
-
 # ---------------------------------------------------------------------------
 # TraceContext.start / stop
 # ---------------------------------------------------------------------------
@@ -93,9 +92,8 @@ class TestTracedContextManager:
             assert ctx.task_id == "t1"
 
     def test_restores_on_exception(self) -> None:
-        with pytest.raises(RuntimeError):
-            with traced("err_phase"):
-                raise RuntimeError("boom")
+        with pytest.raises(RuntimeError), traced("err_phase"):
+            raise RuntimeError("boom")
         assert TraceContext.current() is None
 
     def test_nested_traces(self) -> None:

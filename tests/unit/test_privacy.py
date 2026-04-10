@@ -41,13 +41,11 @@ _is_visual_transport (unit):
 from __future__ import annotations
 
 from typing import Any
-from unittest.mock import patch
 
 import numpy as np
 import pytest
 
 from nexus.core.screenshot_masker import ScreenshotMasker
-from nexus.core.types import Rect
 from nexus.ui.privacy import PrivacyTransparencyScreen, _is_visual_transport
 
 # ---------------------------------------------------------------------------

@@ -198,7 +198,7 @@ def _search_in_content(
 # ---------------------------------------------------------------------------
 
 
-async def _noop_bool(_key: str) -> bool:  # type: ignore[misc]
+async def _noop_bool(_key: str) -> bool:
     return False
 
 

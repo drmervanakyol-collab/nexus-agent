@@ -296,10 +296,7 @@ class CaptureWorkerProcess:
             while not self._stop_event.is_set():
                 t0 = time.monotonic()
 
-                if self._capture_fn is not None:
-                    frame_data = self._capture_fn()
-                else:
-                    frame_data = camera.grab()
+                frame_data = self._capture_fn() if self._capture_fn is not None else camera.grab()
 
                 if frame_data is not None and shm.buf is not None:
                     seq += 1

@@ -14,13 +14,10 @@ averaged over all images.
 from __future__ import annotations
 
 import time
-from typing import Any
 
 import numpy as np
-import pytest
 
 from tests.benchmarks.conftest import BenchmarkRecord, register_result
-from nexus.core.types import Rect
 
 # ---------------------------------------------------------------------------
 # Constants

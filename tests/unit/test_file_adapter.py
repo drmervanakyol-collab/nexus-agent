@@ -20,7 +20,6 @@ import pytest
 
 from nexus.source.file.adapter import DocumentContent, FileAdapter
 
-
 # ---------------------------------------------------------------------------
 # Mock factory helpers
 # ---------------------------------------------------------------------------

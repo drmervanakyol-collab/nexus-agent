@@ -1,0 +1,290 @@
+name: CI
+
+on:
+  push:
+    branches: ["main", "feat/**", "fix/**", "chore/**"]
+  pull_request:
+    branches: ["main"]
+  release:
+    types: [published]
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  PYTHONDONTWRITEBYTECODE: "1"
+  PYTHONUNBUFFERED: "1"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# COMMIT PROFILE — runs on every push (stages 1–2)
+# ─────────────────────────────────────────────────────────────────────────────
+jobs:
+  lint:
+    name: "Stage 1 — Lint"
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install lint tools
+        run: pip install ruff mypy
+
+      - name: Install project (no heavy deps)
+        run: pip install -e . --no-deps || true
+
+      - name: ruff check nexus/ tests/
+        run: ruff check nexus/ tests/
+
+      - name: mypy nexus/
+        run: mypy nexus/
+
+  unit:
+    name: "Stage 2 — Unit Tests"
+    runs-on: windows-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: pytest unit (coverage >= 80%)
+        run: |
+          pytest tests/unit/ -v \
+            --cov=nexus \
+            --cov-report=term-missing \
+            --cov-report=json \
+            --cov-fail-under=80 \
+            --timeout=60
+
+      - name: Upload .coverage (unit)
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-unit
+          path: .coverage
+          retention-days: 1
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PR PROFILE — stages 3–5 + combined coverage check (PR and release only)
+# ─────────────────────────────────────────────────────────────────────────────
+  integration:
+    name: "Stage 3 — Integration Tests"
+    runs-on: windows-latest
+    needs: unit
+    if: github.event_name == 'pull_request' || github.event_name == 'release'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Download unit coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-unit
+
+      - name: pytest integration (append coverage)
+        run: |
+          pytest tests/integration/ -v \
+            --cov=nexus --cov-append \
+            --cov-report=json \
+            --timeout=60
+
+      - name: Upload .coverage (unit+integration)
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-integration
+          path: .coverage
+          retention-days: 1
+
+  property:
+    name: "Stage 4 — Property Tests"
+    runs-on: windows-latest
+    needs: unit
+    if: github.event_name == 'pull_request' || github.event_name == 'release'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: pytest property (Hypothesis)
+        run: pytest tests/property/ -v
+
+  adversarial:
+    name: "Stage 5 — Adversarial Tests"
+    runs-on: windows-latest
+    needs: unit
+    if: github.event_name == 'pull_request' || github.event_name == 'release'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Download unit coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-unit
+
+      - name: pytest adversarial (append coverage)
+        run: |
+          pytest tests/adversarial/ -v \
+            --cov=nexus --cov-append \
+            --cov-report=json
+
+      - name: Upload .coverage (unit+adversarial)
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-adversarial
+          path: .coverage
+          retention-days: 1
+
+  coverage-check:
+    name: "Coverage — Per-module thresholds"
+    runs-on: windows-latest
+    needs: [integration, adversarial]
+    if: github.event_name == 'pull_request' || github.event_name == 'release'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      # Merge coverage from all test stages
+      - name: Download unit coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-unit
+          path: .coverage-unit
+
+      - name: Download integration coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-integration
+          path: .coverage-integration
+
+      - name: Download adversarial coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-adversarial
+          path: .coverage-adversarial
+
+      - name: Merge coverage files
+        run: |
+          cp .coverage-unit/.coverage .coverage.unit
+          cp .coverage-integration/.coverage .coverage.integration
+          cp .coverage-adversarial/.coverage .coverage.adversarial
+          coverage combine .coverage.unit .coverage.integration .coverage.adversarial
+          coverage json
+
+      - name: Per-module coverage thresholds
+        run: python scripts/check_coverage.py
+
+      - name: Upload final coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.json
+          retention-days: 30
+
+# ─────────────────────────────────────────────────────────────────────────────
+# RELEASE PROFILE — stages 6–8 (release only)
+# ─────────────────────────────────────────────────────────────────────────────
+  benchmarks:
+    name: "Stage 6 — Benchmarks"
+    runs-on: windows-latest
+    needs: [integration, property, adversarial]
+    if: github.event_name == 'release'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: pytest benchmarks
+        run: pytest tests/benchmarks/ -v --timeout=120
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-report
+          path: tests/benchmarks/results/
+          retention-days: 30
+
+  security:
+    name: "Stage 7 — Security"
+    runs-on: windows-latest
+    needs: [integration, property, adversarial]
+    if: github.event_name == 'release'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install security tools
+        run: pip install bandit safety
+
+      - name: bandit — nexus/ (low severity+)
+        run: bandit -r nexus/ -ll -q
+
+      - name: safety — dependency vulnerability scan
+        run: safety check --full-report
+
+  dead-code:
+    name: "Stage 8 — Dead Code"
+    runs-on: windows-latest
+    needs: [integration, property, adversarial]
+    if: github.event_name == 'release'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install vulture
+        run: pip install vulture
+
+      - name: vulture nexus/ (confidence >= 80%)
+        run: vulture nexus/ --min-confidence 80

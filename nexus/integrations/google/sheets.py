@@ -78,7 +78,7 @@ def _default_get(url: str, headers: dict[str, str]) -> dict[str, Any]:
 
     req = urllib.request.Request(url, headers=headers, method="GET")
     with urllib.request.urlopen(req, timeout=15) as resp:
-        return json.loads(resp.read())
+        return json.loads(resp.read())  # type: ignore[no-any-return]
 
 
 def _default_put(
@@ -89,7 +89,7 @@ def _default_put(
     data = json.dumps(body).encode()
     req = urllib.request.Request(url, data=data, headers=headers, method="PUT")
     with urllib.request.urlopen(req, timeout=15) as resp:
-        return json.loads(resp.read())
+        return json.loads(resp.read())  # type: ignore[no-any-return]
 
 
 # ---------------------------------------------------------------------------

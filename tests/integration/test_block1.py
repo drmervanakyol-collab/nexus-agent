@@ -27,7 +27,6 @@ from nexus.source.resolver import SourcePriorityResolver, SourceResult
 from nexus.source.transport.fallback import KeyboardTransport, MouseTransport
 from nexus.source.transport.resolver import ActionSpec, TransportResolver
 
-
 # ---------------------------------------------------------------------------
 # Shared helpers
 # ---------------------------------------------------------------------------

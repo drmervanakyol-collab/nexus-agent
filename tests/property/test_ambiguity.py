@@ -18,13 +18,12 @@ from __future__ import annotations
 
 import datetime
 
-import pytest
-from hypothesis import given, settings
+from hypothesis import given
 from hypothesis import strategies as st
 
 from nexus.decision.ambiguity_scorer import (
-    AmbiguityScorer,
     _WEIGHTS,
+    AmbiguityScorer,
     _compute_weighted_score,
 )
 
@@ -67,7 +66,7 @@ def _make_perception(
         source_result=source,
         perception_ms=0.0,
         frame_sequence=1,
-        timestamp=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        timestamp=datetime.datetime.now(datetime.UTC).isoformat(),
     )
 
 
@@ -108,7 +107,7 @@ _factor_value = st.floats(min_value=0.0, max_value=1.0, allow_nan=False)
 
 @given(
     st.fixed_dictionaries(
-        {k: _factor_value for k in _WEIGHTS}
+        dict.fromkeys(_WEIGHTS, _factor_value)
     )
 )
 def test_weighted_score_in_unit_interval(factors: dict) -> None:

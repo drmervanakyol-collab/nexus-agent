@@ -44,7 +44,6 @@ from __future__ import annotations
 import io
 import json
 import sys
-import traceback
 import zipfile
 from typing import Any
 
@@ -52,7 +51,6 @@ import pytest
 
 from nexus.infra.diagnostic import (
     CrashHandler,
-    DiagnosticReport,
     DiagnosticReporter,
     build_zip_bytes,
     sanitize_settings,

@@ -23,11 +23,9 @@ Sections:
 """
 from __future__ import annotations
 
-import time
-
 import numpy as np
 import pytest
-from hypothesis import assume, given, settings
+from hypothesis import given, settings
 from hypothesis import strategies as st
 from hypothesis.extra.numpy import arrays
 
@@ -109,7 +107,9 @@ def _spinner_history() -> list[Frame]:
     5 frames needed (4 gaps).
     """
     from nexus.perception.temporal.temporal_expert import (
-        _SPINNER_MAX_RATIO, _SPINNER_MIN_RATIO, _SPINNER_WINDOW,
+        _SPINNER_MAX_RATIO,
+        _SPINNER_MIN_RATIO,
+        _SPINNER_WINDOW,
     )
     n = _SPINNER_WINDOW + 1  # 5 frames
     frames = []
@@ -193,7 +193,7 @@ class TestStateTypeEnum:
     }
 
     def test_all_required_members(self):
-        assert self._REQUIRED <= {m.name for m in StateType}
+        assert {m.name for m in StateType} >= self._REQUIRED
 
 
 # ---------------------------------------------------------------------------
@@ -290,7 +290,9 @@ class TestHasLoadingText:
 class TestSpinnerDetected:
     def test_spinner_band_all_in_range(self):
         from nexus.perception.temporal.temporal_expert import (
-            _SPINNER_MAX_RATIO, _SPINNER_MIN_RATIO, _SPINNER_WINDOW,
+            _SPINNER_MAX_RATIO,
+            _SPINNER_MIN_RATIO,
+            _SPINNER_WINDOW,
         )
         mid = (_SPINNER_MIN_RATIO + _SPINNER_MAX_RATIO) / 2
         ratios = [mid] * _SPINNER_WINDOW
@@ -303,7 +305,9 @@ class TestSpinnerDetected:
 
     def test_one_ratio_out_of_band_false(self):
         from nexus.perception.temporal.temporal_expert import (
-            _SPINNER_MAX_RATIO, _SPINNER_MIN_RATIO, _SPINNER_WINDOW,
+            _SPINNER_MAX_RATIO,
+            _SPINNER_MIN_RATIO,
+            _SPINNER_WINDOW,
         )
         mid = (_SPINNER_MIN_RATIO + _SPINNER_MAX_RATIO) / 2
         ratios = [mid] * (_SPINNER_WINDOW - 1) + [1.0]  # last one too high

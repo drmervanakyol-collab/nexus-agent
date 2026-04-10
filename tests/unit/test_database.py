@@ -7,9 +7,10 @@ isolated, and leave no files on disk.
 from __future__ import annotations
 
 import asyncio
+
 import pytest
 
-from nexus.infra.database import Database, MAX_CONNECTIONS
+from nexus.infra.database import MAX_CONNECTIONS, Database
 from nexus.infra.repositories import (
     ActionRepository,
     CostRepository,
@@ -17,7 +18,6 @@ from nexus.infra.repositories import (
     TaskRepository,
     TransportAuditRepository,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -69,25 +69,22 @@ class TestDatabaseInit:
         await db.init()
 
     async def test_wal_mode(self, db: Database) -> None:
-        async with db.connection() as conn:
-            async with conn.execute("PRAGMA journal_mode;") as cur:
-                row = await cur.fetchone()
+        async with db.connection() as conn, conn.execute("PRAGMA journal_mode;") as cur:
+            row = await cur.fetchone()
         assert row is not None
         assert row[0] == "wal"
 
     async def test_foreign_keys_on(self, db: Database) -> None:
-        async with db.connection() as conn:
-            async with conn.execute("PRAGMA foreign_keys;") as cur:
-                row = await cur.fetchone()
+        async with db.connection() as conn, conn.execute("PRAGMA foreign_keys;") as cur:
+            row = await cur.fetchone()
         assert row is not None
         assert row[0] == 1
 
     async def test_schema_migration_recorded(self, db: Database) -> None:
-        async with db.connection() as conn:
-            async with conn.execute(
-                "SELECT version FROM schema_migrations WHERE version = 1;"
-            ) as cur:
-                row = await cur.fetchone()
+        async with db.connection() as conn, conn.execute(
+            "SELECT version FROM schema_migrations WHERE version = 1;"
+        ) as cur:
+            row = await cur.fetchone()
         assert row is not None
         assert row[0] == 1
 
@@ -98,18 +95,16 @@ class TestDatabaseInit:
             "user_consent", "transport_audit",
             "schema_migrations",
         }
-        async with db.connection() as conn:
-            async with conn.execute(
-                "SELECT name FROM sqlite_master WHERE type='table';"
-            ) as cur:
-                rows = await cur.fetchall()
+        async with db.connection() as conn, conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table';"
+        ) as cur:
+            rows = await cur.fetchall()
         tables = {r[0] for r in rows}
         assert expected <= tables
 
     async def test_connection_returns_context(self, db: Database) -> None:
-        async with db.connection() as conn:
-            async with conn.execute("SELECT 1;") as cur:
-                row = await cur.fetchone()
+        async with db.connection() as conn, conn.execute("SELECT 1;") as cur:
+            row = await cur.fetchone()
         assert row[0] == 1
 
     async def test_close_is_noop(self, db: Database) -> None:
@@ -351,7 +346,7 @@ class TestCostRepository:
     ) -> None:
         await self._seed(db, "tc4")
         async with db.connection() as conn:
-            for i in range(5):
+            for _i in range(5):
                 await cost_repo.record(
                     conn, task_id="tc4", provider="x", tokens=10, cost_usd=0.001
                 )
@@ -601,10 +596,9 @@ class TestConcurrency:
                 )
                 raise RuntimeError("simulate error")
 
-        async with db.connection() as conn:
-            async with conn.execute(
-                "SELECT goal FROM tasks WHERE id = 'rollback-task';"
-            ) as cur:
-                row = await cur.fetchone()
+        async with db.connection() as conn, conn.execute(
+            "SELECT goal FROM tasks WHERE id = 'rollback-task';"
+        ) as cur:
+            row = await cur.fetchone()
         assert row is not None
         assert row[0] == "test"  # original value preserved

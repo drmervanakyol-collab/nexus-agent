@@ -28,7 +28,6 @@ from nexus.action.preflight import (
 from nexus.action.registry import ActionSpec
 from nexus.core.types import Rect
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

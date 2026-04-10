@@ -25,11 +25,10 @@ from nexus.core.policy import (
     ActionContext,
     PolicyEngine,
 )
+from nexus.core.screenshot_masker import ScreenshotMasker
 from nexus.core.sensitive_regions import SensitiveRegion, SensitiveRegionDetector
 from nexus.core.settings import NexusSettings
 from nexus.core.types import Point, Rect
-from nexus.core.screenshot_masker import ScreenshotMasker
-
 
 # ---------------------------------------------------------------------------
 # Fixtures

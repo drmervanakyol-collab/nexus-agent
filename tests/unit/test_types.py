@@ -1,8 +1,6 @@
 """Unit tests for nexus/core/types.py — geometry and ID types."""
 from __future__ import annotations
 
-import math
-
 import pytest
 
 from nexus.core.types import (
@@ -13,7 +11,6 @@ from nexus.core.types import (
     TaskId,
     TraceId,
 )
-
 
 # ---------------------------------------------------------------------------
 # Point

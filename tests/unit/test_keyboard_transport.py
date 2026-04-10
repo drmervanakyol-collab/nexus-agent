@@ -15,18 +15,14 @@ Coverage
 """
 from __future__ import annotations
 
-from unittest.mock import MagicMock
-
-import pytest
-
 from nexus.source.transport.keyboard_transport import (
     _KEYEVENTF_KEYUP,
     _KEYEVENTF_UNICODE,
+    _TURKISH_VK_MAP,
     _VK_BACK,
     _VK_RETURN,
-    _TURKISH_VK_MAP,
-    _resolve_vk,
     KeyboardTransport,
+    _resolve_vk,
 )
 from nexus.source.transport.mouse_transport import _KeyEvent
 

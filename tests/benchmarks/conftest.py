@@ -13,14 +13,12 @@ prior JSON report to enable regression detection.
 from __future__ import annotations
 
 import datetime
-import os
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 import numpy as np
-import pytest
 
 # ---------------------------------------------------------------------------
 # Pytest session-finish hook — write JSON + Markdown report
@@ -73,7 +71,7 @@ def make_frame(
         width=width,
         height=height,
         captured_at_monotonic=time.monotonic(),
-        captured_at_utc=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        captured_at_utc=datetime.datetime.now(datetime.UTC).isoformat(),
         sequence_number=seq,
     )
 

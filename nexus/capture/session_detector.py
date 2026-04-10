@@ -112,14 +112,14 @@ def _default_get_foreground_title() -> str:
     try:
         import ctypes
 
-        hwnd = ctypes.windll.user32.GetForegroundWindow()  # type: ignore[attr-defined]
+        hwnd = ctypes.windll.user32.GetForegroundWindow()
         if not hwnd:
             return ""
-        length = ctypes.windll.user32.GetWindowTextLengthW(hwnd)  # type: ignore[attr-defined]
+        length = ctypes.windll.user32.GetWindowTextLengthW(hwnd)
         if length <= 0:
             return ""
         buf = ctypes.create_unicode_buffer(length + 1)
-        ctypes.windll.user32.GetWindowTextW(hwnd, buf, length + 1)  # type: ignore[attr-defined]
+        ctypes.windll.user32.GetWindowTextW(hwnd, buf, length + 1)
         return buf.value
     except Exception as exc:
         _log.debug("get_foreground_title_failed", error=str(exc))
@@ -131,12 +131,12 @@ def _default_is_locked() -> bool:
     try:
         import ctypes
 
-        hwnd = ctypes.windll.user32.GetForegroundWindow()  # type: ignore[attr-defined]
+        hwnd = ctypes.windll.user32.GetForegroundWindow()
         if not hwnd:
             return True  # no foreground window → likely locked
-        length = ctypes.windll.user32.GetWindowTextLengthW(hwnd)  # type: ignore[attr-defined]
+        length = ctypes.windll.user32.GetWindowTextLengthW(hwnd)
         buf = ctypes.create_unicode_buffer(max(length + 1, 1))
-        ctypes.windll.user32.GetWindowTextW(hwnd, buf, length + 1)  # type: ignore[attr-defined]
+        ctypes.windll.user32.GetWindowTextW(hwnd, buf, length + 1)
         title = buf.value.lower()
         return "lockapp" in title or "winlogon" in title
     except Exception as exc:
@@ -153,14 +153,14 @@ def _default_is_secure_desktop() -> bool:
         import ctypes
 
         _ACCESS_DESKTOP = 0x0001
-        hdesk = ctypes.windll.user32.OpenInputDesktop(0, False, _ACCESS_DESKTOP)  # type: ignore[attr-defined]
+        hdesk = ctypes.windll.user32.OpenInputDesktop(0, False, _ACCESS_DESKTOP)
         if not hdesk:
             return True  # cannot open → likely secure desktop
         buf = ctypes.create_unicode_buffer(256)
-        ok = ctypes.windll.user32.GetUserObjectInformationW(  # type: ignore[attr-defined]
+        ok = ctypes.windll.user32.GetUserObjectInformationW(
             hdesk, 2, buf, ctypes.sizeof(buf), None
         )
-        ctypes.windll.user32.CloseDesktop(hdesk)  # type: ignore[attr-defined]
+        ctypes.windll.user32.CloseDesktop(hdesk)
         if not ok:
             return False
         return buf.value.lower() != "default"
@@ -174,10 +174,10 @@ def _default_is_minimized() -> bool:
     try:
         import ctypes
 
-        hwnd = ctypes.windll.user32.GetForegroundWindow()  # type: ignore[attr-defined]
+        hwnd = ctypes.windll.user32.GetForegroundWindow()
         if not hwnd:
             return False
-        return bool(ctypes.windll.user32.IsIconic(hwnd))  # type: ignore[attr-defined]
+        return bool(ctypes.windll.user32.IsIconic(hwnd))
     except Exception as exc:
         _log.debug("is_minimized_check_failed", error=str(exc))
         return False

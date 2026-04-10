@@ -28,14 +28,12 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 from hypothesis.extra.numpy import arrays
 
-from nexus.capture.frame import Frame
 from nexus.core.errors import OCRError
 from nexus.core.types import Rect
 from nexus.perception.reader.ocr_engine import (
     OCREngine,
     OCRResult,
     TesseractOCREngine,
-    _TURKISH_OCR_FIXES,
 )
 
 # ---------------------------------------------------------------------------
@@ -213,7 +211,7 @@ class TestNormalExtraction:
         lines = [
             _TSV_HEADER,
             "1\t1\t1\t1\t1\t0\t0\t0\t640\t480\t-1\t",  # block row
-            f"5\t1\t1\t1\t1\t1\t5\t5\t30\t12\t92.0\tWord",
+            "5\t1\t1\t1\t1\t1\t5\t5\t30\t12\t92.0\tWord",
         ]
         engine = _make_engine(run_fn=lambda img, lang, t: "\n".join(lines))
         results = engine.extract(_make_image())
@@ -508,7 +506,7 @@ class TestTurkishPostprocessing:
     def test_latin1_lowercase_dotless_i_fixed(self) -> None:
         assert TesseractOCREngine._postprocess_turkish("\u00fd") == "\u0131"
 
-    def test_latin1_S_cedilla_capital_fixed(self) -> None:
+    def test_latin1_s_cedilla_capital_fixed(self) -> None:
         assert TesseractOCREngine._postprocess_turkish("\u00de") == "\u015e"
 
     def test_latin1_s_cedilla_lower_fixed(self) -> None:

@@ -18,13 +18,12 @@ from __future__ import annotations
 import pytest
 
 from nexus.core.policy import (
-    RULE_TASK_BUDGET,
     RULE_DAILY_BUDGET,
+    RULE_TASK_BUDGET,
     ActionContext,
     PolicyEngine,
 )
 from nexus.core.settings import BudgetSettings, NexusSettings
-
 
 # ---------------------------------------------------------------------------
 # Helpers

@@ -39,7 +39,6 @@ from __future__ import annotations
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any
 
 from nexus.core.task_executor import TaskContext
 from nexus.infra.cost_tracker import DashboardData, TransportBreakdown
@@ -377,9 +376,6 @@ def _ascii_bar(value: float, max_value: float, width: int) -> str:
 
     Example with width=10: ``"████░░░░░░"``
     """
-    if max_value <= 0:
-        filled = 0
-    else:
-        filled = round(value / max_value * width)
+    filled = 0 if max_value <= 0 else round(value / max_value * width)
     filled = max(0, min(filled, width))
     return _BAR_CHAR * filled + _EMPTY_CHAR * (width - filled)

@@ -33,10 +33,8 @@ from __future__ import annotations
 
 from typing import Any
 
-import pytest
-
-from nexus.integrations.google.drive import DriveFile, GoogleDriveClient
 from nexus.integrations.google.docs import GoogleDocsClient
+from nexus.integrations.google.drive import DriveFile, GoogleDriveClient
 
 _TOKEN = "ya29.test_token"
 
@@ -78,7 +76,6 @@ def _drive_client(
         return file_bytes or b""
 
     # Patch write_bytes for download verification
-    import nexus.integrations.google.drive as _mod  # noqa: PLC0415
     original_write = None
 
     client = GoogleDriveClient(

@@ -56,7 +56,6 @@ CancelHandler — install / uninstall:
 from __future__ import annotations
 
 import signal
-from dataclasses import dataclass, field
 from typing import Any
 
 import pytest

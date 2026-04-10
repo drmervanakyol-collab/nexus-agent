@@ -156,7 +156,7 @@ def _default_wait_for_code(port: int) -> str | None:
             self.end_headers()
             self.wfile.write(b"Authorization complete. You may close this tab.")
 
-        def log_message(self, *_: Any) -> None:  # type: ignore[override]
+        def log_message(self, *_: Any) -> None:
             pass  # suppress server log output
 
     server = HTTPServer(("localhost", port), _Handler)

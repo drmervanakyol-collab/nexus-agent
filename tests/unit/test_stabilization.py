@@ -16,7 +16,6 @@ or actual timing delays.
 from __future__ import annotations
 
 import time
-from collections.abc import Iterator
 from itertools import cycle
 
 import numpy as np
@@ -27,12 +26,12 @@ from hypothesis.extra.numpy import arrays
 
 from nexus.capture.frame import Frame
 from nexus.capture.stabilization import (
-    PIXEL_CHANGE_THRESHOLD,
-    StabilizationGate,
-    StabilizationResult,
     _SPINNER_MAX_RATIO,
     _SPINNER_MIN_RATIO,
     _SPINNER_WINDOW,
+    PIXEL_CHANGE_THRESHOLD,
+    StabilizationGate,
+    StabilizationResult,
 )
 
 # ---------------------------------------------------------------------------

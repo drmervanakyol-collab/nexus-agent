@@ -16,8 +16,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-import pytest
-from hypothesis import assume, given, settings
+from hypothesis import assume, given
 from hypothesis import strategies as st
 
 from nexus.core.settings import BudgetSettings, NexusSettings
@@ -88,7 +87,7 @@ def test_task_cost_monotonically_nondecreasing(
     assume(len(in_tokens) == len(out_tokens))
     tracker = _make_tracker()
     prev_cost = 0.0
-    for in_t, out_t in zip(in_tokens, out_tokens):
+    for in_t, out_t in zip(in_tokens, out_tokens, strict=False):
         tracker.record("t1", model, input_tokens=in_t, output_tokens=out_t)
         cur_cost = tracker.get_task_cost("t1")
         assert cur_cost >= prev_cost - 1e-12  # small float tolerance

@@ -325,10 +325,7 @@ class Locator:
         active_window: Rect | None,
     ) -> list[Rect]:
         """Return the list of rectangles to scan."""
-        if dirty_regions is None:
-            regions = [Rect(0, 0, frame_w, frame_h)]
-        else:
-            regions = list(dirty_regions)  # empty list → nothing to scan
+        regions = [Rect(0, 0, frame_w, frame_h)] if dirty_regions is None else list(dirty_regions)  # noqa: E501
 
         if active_window is not None:
             regions = [

@@ -17,7 +17,7 @@ Coverage targets
 from __future__ import annotations
 
 import threading
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -27,18 +27,14 @@ from nexus.infra.cost_tracker import (
     CostSummary,
     CostTracker,
     DashboardData,
-    DayTotal,
-    TaskCost,
-    TransportBreakdown,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures / helpers
 # ---------------------------------------------------------------------------
 
 # Deterministic UTC times
-_D0 = datetime(2026, 4, 3, 12, 0, 0, tzinfo=timezone.utc)  # "today"
+_D0 = datetime(2026, 4, 3, 12, 0, 0, tzinfo=UTC)  # "today"
 _D1 = _D0 - timedelta(days=1)
 _D2 = _D0 - timedelta(days=2)
 _D6 = _D0 - timedelta(days=6)

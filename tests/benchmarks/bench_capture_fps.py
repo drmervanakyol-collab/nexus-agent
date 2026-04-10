@@ -12,12 +12,10 @@ from __future__ import annotations
 import datetime
 import time
 from typing import Any
-from unittest.mock import MagicMock
 
 import numpy as np
-import pytest
 
-from tests.benchmarks.conftest import BenchmarkRecord, make_frame, register_result
+from tests.benchmarks.conftest import BenchmarkRecord, register_result
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -38,7 +36,7 @@ def _build_frame_sequence(duration_s: float, fps: float) -> list[Any]:
     """Build a list of Frame objects matching *fps* for *duration_s*."""
     n = int(duration_s * fps)
     t0 = time.monotonic()
-    now_utc = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    now_utc = datetime.datetime.now(datetime.UTC).isoformat()
     data = np.zeros((1080, 1920, 3), dtype=np.uint8)
 
     from nexus.capture.frame import Frame

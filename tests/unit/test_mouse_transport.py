@@ -17,8 +17,6 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-import pytest
-
 from nexus.source.transport.mouse_transport import (
     _MOUSEEVENTF_ABSOLUTE,
     _MOUSEEVENTF_LEFTDOWN,
@@ -30,8 +28,8 @@ from nexus.source.transport.mouse_transport import (
     _MOUSEEVENTF_RIGHTUP,
     _MOUSEEVENTF_WHEEL,
     _WHEEL_DELTA,
-    _MouseEvent,
     MouseTransport,
+    _MouseEvent,
 )
 
 # ---------------------------------------------------------------------------

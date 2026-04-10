@@ -8,14 +8,12 @@ import json
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from nexus.core.settings import NexusSettings
 from nexus.core.types import Rect
 from nexus.source.dom.adapter import DOMAdapter, DOMElement
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -92,7 +90,7 @@ def _failing_factory(exc: Exception | None = None) -> Any:
     @asynccontextmanager
     async def _factory(port: int) -> AsyncIterator[None]:
         raise exc or ConnectionRefusedError("No browser")
-        yield  # noqa: unreachable — needed for generator protocol
+        yield  # needed for generator protocol
 
     return _factory
 

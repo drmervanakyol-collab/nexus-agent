@@ -24,9 +24,7 @@ Sections:
 from __future__ import annotations
 
 import json
-import math
 import uuid
-from typing import Any
 
 import pytest
 
@@ -137,7 +135,7 @@ class TestRelationTypeEnum:
     }
 
     def test_all_required_members(self):
-        assert self._REQUIRED <= {m.name for m in RelationType}
+        assert {m.name for m in RelationType} >= self._REQUIRED
 
 
 # ---------------------------------------------------------------------------

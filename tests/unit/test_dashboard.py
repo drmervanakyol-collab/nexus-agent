@@ -49,9 +49,7 @@ _ascii_bar (unit):
 """
 from __future__ import annotations
 
-import time
 from datetime import date
-from typing import Any
 
 import pytest
 
