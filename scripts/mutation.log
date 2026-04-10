@@ -1,0 +1,4 @@
+[mutation] Collecting source files from: ['nexus/core/types.py']
+[mutation] Found 1 source file(s)
+[mutation] Verifying baseline (all tests pass on unmodified code)...
+[mutation] ERROR: baseline tests fail — fix them first

@@ -1,0 +1,157 @@
+{
+  "generated_at": "2026-04-10T04:21:52.070192+00:00",
+  "total_mutants": 20,
+  "killed_mutants": 17,
+  "survived_mutants": 3,
+  "mutation_score": 0.85,
+  "threshold": 0.7,
+  "passed": true,
+  "source_paths": [
+    "nexus/core/types.py"
+  ],
+  "test_paths": [
+    "tests/property/"
+  ],
+  "mutants": [
+    {
+      "source_path": "nexus\\core\\types.py",
+      "description": "COR line 83: And ->Or",
+      "lineno": 83,
+      "killed": true,
+      "error": ""
+    },
+    {
+      "source_path": "nexus\\core\\types.py",
+      "description": "BCR line 26: True ->False",
+      "lineno": 26,
+      "killed": false,
+      "error": ""
+    },
+    {
+      "source_path": "nexus\\core\\types.py",
+      "description": "ROR line 90: Lt ->LtE",
+      "lineno": 90,
+      "killed": true,
+      "error": ""
+    },
+    {
+      "source_path": "nexus\\core\\types.py",
+      "description": "COR line 88: And ->Or",
+      "lineno": 88,
+      "killed": true,
+      "error": ""
+    },
+    {
+      "source_path": "nexus\\core\\types.py",
+      "description": "LCR line 79: 2 ->3",
+      "lineno": 79,
+      "killed": true,
+      "error": ""
+    },
+    {
+      "source_path": "nexus\\core\\types.py",
+      "description": "AOR line 109: - ->+",
+      "lineno": 109,
+      "killed": true,
+      "error": ""
+    },
+    {
+      "source_path": "nexus\\core\\types.py",
+      "description": "AOR line 63: + ->-",
+      "lineno": 63,
+      "killed": true,
+      "error": ""
+    },
+    {
+      "source_path": "nexus\\core\\types.py",
+      "description": "AOR line 79: Floor/ ->%",
+      "lineno": 79,
+      "killed": true,
+      "error": ""
+    },
+    {
+      "source_path": "nexus\\core\\types.py",
+      "description": "ROR line 54: Lt ->LtE",
+      "lineno": 54,
+      "killed": true,
+      "error": ""
+    },
+    {
+      "source_path": "nexus\\core\\types.py",
+      "description": "ROR line 88: Lt ->LtE",
+      "lineno": 88,
+      "killed": true,
+      "error": ""
+    },
+    {
+      "source_path": "nexus\\core\\types.py",
+      "description": "ROR line 83: LtE ->Lt",
+      "lineno": 83,
+      "killed": true,
+      "error": ""
+    },
+    {
+      "source_path": "nexus\\core\\types.py",
+      "description": "ROR line 52: Lt ->LtE",
+      "lineno": 52,
+      "killed": true,
+      "error": ""
+    },
+    {
+      "source_path": "nexus\\core\\types.py",
+      "description": "ROR line 83: LtE ->Lt",
+      "lineno": 83,
+      "killed": true,
+      "error": ""
+    },
+    {
+      "source_path": "nexus\\core\\types.py",
+      "description": "LCR line 52: 0 ->1",
+      "lineno": 52,
+      "killed": true,
+      "error": ""
+    },
+    {
+      "source_path": "nexus\\core\\types.py",
+      "description": "LCR line 79: 2 ->3",
+      "lineno": 79,
+      "killed": true,
+      "error": ""
+    },
+    {
+      "source_path": "nexus\\core\\types.py",
+      "description": "LCR line 26: True ->2",
+      "lineno": 26,
+      "killed": false,
+      "error": ""
+    },
+    {
+      "source_path": "nexus\\core\\types.py",
+      "description": "LCR line 108: 0 ->1",
+      "lineno": 108,
+      "killed": false,
+      "error": ""
+    },
+    {
+      "source_path": "nexus\\core\\types.py",
+      "description": "AOR line 75: * ->/",
+      "lineno": 75,
+      "killed": true,
+      "error": ""
+    },
+    {
+      "source_path": "nexus\\core\\types.py",
+      "description": "ROR line 91: Lt ->LtE",
+      "lineno": 91,
+      "killed": true,
+      "error": ""
+    },
+    {
+      "source_path": "nexus\\core\\types.py",
+      "description": "AOR line 79: Floor/ ->%",
+      "lineno": 79,
+      "killed": true,
+      "error": ""
+    }
+  ]
+}

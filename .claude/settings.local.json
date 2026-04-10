@@ -36,7 +36,32 @@
       "Bash(git check-ignore:*)",
       "Bash(echo \"EXIT: $?\")",
       "Bash(echo \"RUFF_EXIT: $?\")",
-      "Bash(ls *.toml *.cfg)"
+      "Bash(ls *.toml *.cfg)",
+      "Bash(grep -n \"class TransportResolver\\\\|TransportResolver\" /c/Users/Mervan/nexus-agent/nexus/source/transport/*.py)",
+      "Bash(grep -n \"class.*SourceResult\\\\|SourceResult\" /c/Users/Mervan/nexus-agent/nexus/source/*.py)",
+      "Bash(grep -n \"class Database\\\\|class.*Database\" /c/Users/Mervan/nexus-agent/nexus/infra/*.py)",
+      "Bash(grep -n \"class Database\" /c/Users/Mervan/nexus-agent/nexus/**/*.py)",
+      "Bash(git restore:*)",
+      "Bash(mutmut --version)",
+      "Bash(wsl --version)",
+      "Bash(wsl python3:*)",
+      "Bash(tasklist /fi \"imagename eq python.exe\")",
+      "Bash(tasklist)",
+      "Bash(safety --version)",
+      "Bash(pip list:*)",
+      "Bash(ls tests/unit/*.py)",
+      "Bash(pytest tests/unit/ -v --cov=nexus --cov-report=json --cov-fail-under=80 --timeout=60 -q)",
+      "Bash(pytest tests/unit/test_types.py::TestRectOverlaps -v)",
+      "Bash(grep -v \"^$\")",
+      "Bash(grep -oP 'error\\\\[\\([A-Z]\\\\d+\\)\\\\]|\\\\b\\([EFNBICUPSTWsim]{1,3}\\\\d{3,4}\\)\\\\b')",
+      "Bash(grep -v \"^warning\\\\|^$\")",
+      "Bash(grep -n \"TaskStatus\" nexus/core/types.py nexus/core/*.py)",
+      "Bash(pytest tests/unit/ -q --timeout=60)",
+      "Bash(pytest tests/integration/test_block10.py -v)",
+      "Bash(pytest tests/unit/test_legal_documents.py tests/unit/test_onboarding.py tests/integration/test_block9.py::TestOnboardingIntegration -v)",
+      "Bash(pytest tests/unit/test_legal_documents.py tests/unit/test_onboarding.py -v)",
+      "Bash(pytest tests/integration/test_block9.py -v -q)",
+      "Bash(cat nexus/release/*.py)"
     ]
   }
 }
