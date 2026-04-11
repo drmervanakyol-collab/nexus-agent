@@ -109,9 +109,12 @@ def _default_automation_factory() -> Any:
     """Create the real IUIAutomation COM object via comtypes."""
     import comtypes.client  # noqa: PLC0415
 
+    comtypes.client.GetModule("UIAutomationCore.dll")
+    from comtypes.gen import UIAutomationClient  # noqa: PLC0415
+
     return comtypes.client.CreateObject(
         _CLSID_CUIAutomation,
-        interface=None,  # returns IDispatch; cast later
+        interface=UIAutomationClient.IUIAutomation,
     )
 
 
@@ -252,14 +255,14 @@ class UIAAdapter:
     # Action methods
     # ------------------------------------------------------------------
 
-    def invoke(self, element: UIAElement) -> bool:
+    def invoke(self, element: UIAElement | None) -> bool:
         """
         Call ``InvokePattern.Invoke()`` on *element*.
 
         Returns True on success, False if the pattern is unavailable or if
         any COM exception occurs.
         """
-        if element._raw is None:
+        if element is None or element._raw is None:
             return False
         try:
             pattern = element._raw.GetCurrentPattern(_UIA_InvokePatternId)
@@ -270,13 +273,13 @@ class UIAAdapter:
             _log.debug("uia_invoke_failed", name=element.name, error=str(exc))
             return False
 
-    def set_value(self, element: UIAElement, value: str) -> bool:
+    def set_value(self, element: UIAElement | None, value: str) -> bool:
         """
         Call ``ValuePattern.SetValue(value)`` on *element*.
 
         Returns True on success, False on any COM exception.
         """
-        if element._raw is None:
+        if element is None or element._raw is None:
             return False
         try:
             pattern = element._raw.GetCurrentPattern(_UIA_ValuePatternId)
@@ -287,13 +290,13 @@ class UIAAdapter:
             _log.debug("uia_set_value_failed", name=element.name, error=str(exc))
             return False
 
-    def select(self, element: UIAElement) -> bool:
+    def select(self, element: UIAElement | None) -> bool:
         """
         Call ``SelectionItemPattern.Select()`` on *element*.
 
         Returns True on success, False on any COM exception.
         """
-        if element._raw is None:
+        if element is None or element._raw is None:
             return False
         try:
             pattern = element._raw.GetCurrentPattern(

@@ -57,8 +57,8 @@ from nexus.perception.arbitration.arbitrator import (
     ArbitrationResult,
     PerceptionArbitrator,
 )
-from nexus.perception.locator.locator import Locator, UIElement
-from nexus.perception.matcher.matcher import Matcher, SemanticLabel
+from nexus.perception.locator.locator import ElementType, Locator, UIElement
+from nexus.perception.matcher.matcher import Affordance, Matcher, SemanticLabel
 from nexus.perception.reader.ocr_engine import OCREngine, OCRResult
 from nexus.perception.reader.reader import ReaderOutput
 from nexus.perception.spatial_graph import SpatialGraph
@@ -78,6 +78,31 @@ _log = get_logger(__name__)
 _DEFAULT_CACHE_TTL_S: float = 0.200   # 200 ms
 _STRUCTURED_SOURCES: frozenset[str] = frozenset({"uia", "dom", "file"})
 
+# UIA control-type integer → ElementType
+_UIA_CTRL_TYPE: dict[int, ElementType] = {
+    50000: ElementType.BUTTON,
+    50002: ElementType.CHECKBOX,
+    50004: ElementType.INPUT,
+    50007: ElementType.IMAGE,
+    50008: ElementType.BUTTON,    # ListItem
+    50009: ElementType.CONTAINER, # List
+    50010: ElementType.DROPDOWN,  # ComboBox
+    50012: ElementType.MENU,      # MenuItem
+    50013: ElementType.MENU,
+    50015: ElementType.RADIO,
+    50020: ElementType.LABEL,     # Text
+    50025: ElementType.CONTAINER, # Window
+    50026: ElementType.PANEL,     # Pane
+    50030: ElementType.TAB,
+    50031: ElementType.TAB,       # TabItem
+    50034: ElementType.PANEL,     # Toolbar
+    50035: ElementType.TOOLTIP,
+}
+
+_DESTRUCTIVE_KEYWORDS: frozenset[str] = frozenset(
+    {"delete", "remove", "discard", "sil", "kaldır", "close", "kapat"}
+)
+
 # Stable state used for structured sources (they already resolved element info).
 _STRUCTURED_STABLE_STATE = ScreenState(
     state_type=StateType.STABLE,
@@ -94,6 +119,17 @@ _EMPTY_ARBITRATION = ArbitrationResult(
     conflicts_resolved=0,
     temporal_blocked=False,
     overall_confidence=0.0,
+)
+
+# For structured (UIA/DOM) sources we already have reliable element data —
+# use full confidence so the ambiguity scorer can route locally.
+_STRUCTURED_ARBITRATION = ArbitrationResult(
+    resolved_elements=(),
+    resolved_labels=(),
+    conflicts_detected=0,
+    conflicts_resolved=0,
+    temporal_blocked=False,
+    overall_confidence=1.0,
 )
 
 
@@ -288,9 +324,8 @@ class PerceptionOrchestrator:
         """
         Build a PerceptionResult without running Locator or OCR.
 
-        Structured sources (UIA, DOM, File) provide their own element tree;
-        vision-based detection is unnecessary and expensive.  We return an
-        empty SpatialGraph alongside a guaranteed STABLE ScreenState.
+        For UIA source, converts the native element tree into a SpatialGraph
+        so the LLM prompt includes element names and coordinates.
         """
         _log.debug(
             "perception_structured_bypass",
@@ -298,11 +333,19 @@ class PerceptionOrchestrator:
             frame_sequence=stable_frame.sequence_number,
         )
         perception_ms = (self._time() - t0) * 1000
-        graph = SpatialGraph([], [], {})
+
+        uia_elements = source_result.data if source_result.source_type == "uia" else None
+        if isinstance(uia_elements, list) and uia_elements:
+            graph = _uia_to_spatial_graph(uia_elements)
+            arbitration = _STRUCTURED_ARBITRATION
+        else:
+            graph = SpatialGraph([], [], {})
+            arbitration = _EMPTY_ARBITRATION
+
         return PerceptionResult(
             spatial_graph=graph,
             screen_state=_STRUCTURED_STABLE_STATE,
-            arbitration=_EMPTY_ARBITRATION,
+            arbitration=arbitration,
             source_result=source_result,
             perception_ms=round(perception_ms, 3),
             frame_sequence=stable_frame.sequence_number,
@@ -444,6 +487,79 @@ def _make_reader_output(
         reading_order=list(element_texts.keys()),
         table_data=None,
     )
+
+
+def _uia_to_spatial_graph(uia_elements: list[Any], max_nodes: int = 500) -> SpatialGraph:
+    """
+    Convert a list of UIAElements into a SpatialGraph.
+
+    Visible, named elements are translated to UIElement + SemanticLabel pairs
+    so the LLM prompt can reference them by name/id and coordinates.
+    """
+    ui_elements: list[UIElement] = []
+    sem_labels: list[SemanticLabel] = []
+    texts: dict[ElementId, str] = {}
+    seen_ids: set[str] = set()
+
+    for i, uia in enumerate(uia_elements):
+        if not uia.is_visible:
+            continue
+        if uia.bounding_rect is None:
+            continue
+
+        # --- Build a stable element ID ---
+        raw_id = uia.automation_id or uia.name or f"uia-{i}"
+        elem_id = raw_id
+        counter = 0
+        while elem_id in seen_ids:
+            counter += 1
+            elem_id = f"{raw_id}-{counter}"
+        seen_ids.add(elem_id)
+
+        # --- ElementType from UIA control-type integer ---
+        elem_type = _UIA_CTRL_TYPE.get(uia.control_type, ElementType.UNKNOWN)
+
+        # --- Affordance from supported patterns ---
+        if uia.supports_value:
+            affordance = Affordance.TYPEABLE
+        elif uia.supports_invoke or uia.supports_expand_collapse:
+            affordance = Affordance.CLICKABLE
+        elif uia.supports_selection:
+            affordance = Affordance.SELECTABLE
+        elif elem_type == ElementType.LABEL:
+            affordance = Affordance.READ_ONLY
+        else:
+            affordance = Affordance.UNKNOWN
+
+        name_lower = (uia.name or "").lower()
+        is_destructive = any(kw in name_lower for kw in _DESTRUCTIVE_KEYWORDS)
+
+        ui_elem = UIElement(
+            id=elem_id,
+            element_type=elem_type,
+            bounding_box=uia.bounding_rect,
+            confidence=0.9,
+            is_visible=True,
+            is_occluded=False,
+            occlusion_ratio=0.0,
+            z_order_estimate=0,
+        )
+        sem = SemanticLabel(
+            element_id=elem_id,
+            primary_label=uia.name or elem_id,
+            secondary_labels=(uia.value,) if uia.value else (),
+            confidence=0.9,
+            affordance=affordance,
+            is_destructive=is_destructive,
+        )
+
+        if uia.value:
+            texts[elem_id] = uia.value
+
+        ui_elements.append(ui_elem)
+        sem_labels.append(sem)
+
+    return SpatialGraph(ui_elements, sem_labels, texts, max_nodes=max_nodes)
 
 
 def _noop(*_args: Any, **_kwargs: Any) -> None:  # noqa: ANN401

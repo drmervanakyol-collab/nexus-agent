@@ -9,6 +9,11 @@
 ;   NEXUS_DIST_DIR     — path to dist\nexus-agent\ (PyInstaller output)
 ;   NEXUS_OUTPUT_DIR   — destination directory for setup.exe (default: dist\)
 ;
+; Prerequisites (place in installer\ before building):
+;   installer\tesseract-setup.exe  — Tesseract OCR 5.x 64-bit silent installer
+;     Download: https://github.com/UB-Mannheim/tesseract/wiki
+;     Filename: tesseract-ocr-w64-setup-5.5.0.20241111.exe (rename to tesseract-setup.exe)
+;
 ; Output: nexus-agent-v{NEXUS_VERSION}-setup.exe
 
 #define AppName      "Nexus Agent"
@@ -75,6 +80,8 @@ Name: "startmenuicon"; Description: "Create Start Menu shortcut"; GroupDescripti
 [Files]
 ; Main application bundle — everything from the PyInstaller dist directory
 Source: "{#DistDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+; Tesseract OCR installer — bundled, extracted to temp dir and run silently
+Source: "tesseract-setup.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall
 
 [Icons]
 ; Desktop shortcut
@@ -84,6 +91,12 @@ Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Comment: "Launch Ne
 Name: "{group}\Uninstall {#AppName}"; Filename: "{uninstallexe}"
 
 [Run]
+; Install Tesseract OCR silently (only if not already installed)
+Filename: "{tmp}\tesseract-setup.exe"; \
+  Parameters: "/VERYSILENT /NORESTART /COMPONENTS=""languages\eng,languages\tur"" /SP-"; \
+  StatusMsg: "Installing Tesseract OCR..."; \
+  Check: not IsTesseractInstalled; \
+  Flags: waituntilterminated
 ; Optional: launch after install
 Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent
 
@@ -93,6 +106,20 @@ Type: filesandordirs; Name: "{localappdata}\NexusAgent\logs"
 Type: filesandordirs; Name: "{localappdata}\NexusAgent\cache"
 
 [Code]
+// ---------------------------------------------------------------------------
+// Tesseract detection — skip install if already present
+// ---------------------------------------------------------------------------
+function IsTesseractInstalled(): Boolean;
+var
+  sPath: String;
+begin
+  // Check registry for Tesseract uninstall key (both HKLM and HKCU)
+  Result := RegQueryStringValue(HKEY_LOCAL_MACHINE,
+      'SOFTWARE\Tesseract-OCR', 'InstallDir', sPath)
+    or RegQueryStringValue(HKEY_CURRENT_USER,
+      'SOFTWARE\Tesseract-OCR', 'InstallDir', sPath);
+end;
+
 // ---------------------------------------------------------------------------
 // Upgrade detection — remove old version before installing new one
 // ---------------------------------------------------------------------------

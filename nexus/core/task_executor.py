@@ -95,6 +95,63 @@ from nexus.verification import VerificationPolicy, VerificationResult
 
 _log = get_logger(__name__)
 
+
+def _uia_elem_id(elem: Any) -> str:
+    """
+    Generate the element ID consistent with _uia_to_spatial_graph.
+    Uses automation_id when non-empty, otherwise falls back to name.
+    """
+    return (elem.automation_id or elem.name or "").strip()
+
+
+def _resolve_uia_target(source_result: SourceResult, target: Any) -> Any:
+    """
+    Find the best matching UIAElement from UIA source data.
+
+    Tries, in order:
+      1. Generated element-ID match (same logic as _uia_to_spatial_graph).
+      2. Name / description substring match (visible elements only).
+      3. Coordinate containment (bounding rect).
+    Returns None when no match is found or when the source is not UIA.
+    """
+    if source_result.source_type != "uia":
+        return None
+    elements = source_result.data
+    if not isinstance(elements, list) or not elements:
+        return None
+
+    # 1. Generated element-ID match
+    if target.element_id:
+        tid = target.element_id.strip()
+        for elem in elements:
+            if _uia_elem_id(elem) == tid:
+                return elem
+
+    # 2. Name / description substring match (visible elements only)
+    if target.description:
+        desc = target.description.lower().strip()
+        candidates = [e for e in elements if e.is_visible and e.name]
+        # elem.name is a prefix/substring of description
+        for elem in candidates:
+            if elem.name.lower() in desc:
+                return elem
+        # description is a prefix/substring of elem.name
+        for elem in candidates:
+            if desc in elem.name.lower():
+                return elem
+
+    # 3. Coordinate containment (bounding rect)
+    if target.coordinates:
+        x, y = target.coordinates
+        for elem in elements:
+            if elem.bounding_rect and elem.is_visible:
+                r = elem.bounding_rect
+                if r.x <= x <= r.x + r.width and r.y <= y <= r.y + r.height:
+                    return elem
+
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Type aliases for injectable callables
 # ---------------------------------------------------------------------------
@@ -109,7 +166,10 @@ VerifierFn = Callable[[Frame, Frame, str], Awaitable[VerificationResult]]
 ProgressFn = Callable[[str], None]
 
 # Action types that should not trigger verification
-_SKIP_VERIFY_ACTIONS: frozenset[str] = frozenset({"done", "complete", "finish", "wait"})
+_SKIP_VERIFY_ACTIONS: frozenset[str] = frozenset({"done", "complete", "finish"})
+
+# Action types (and task_status values) that signal task completion
+_DONE_ACTION_TYPES: frozenset[str] = frozenset({"done", "complete", "finish"})
 
 # Native transport methods (for transport_stats counting)
 _NATIVE_METHODS: frozenset[str] = frozenset({"uia", "dom", "file"})
@@ -348,12 +408,30 @@ class TaskExecutor:
                     error = "No DecisionEngine configured"
                     break
 
+                # Determine if the last transport used a fallback channel
+                _last_transport = ctx.action_history[-1] if ctx.action_history else None
+                _used_fallback = (
+                    _last_transport is not None
+                    and getattr(_last_transport, "outcome", None) == "fallback"
+                ) or (source_result.source_type == "visual")
+
+                # UIA/DOM sources give reliable structured data — treat screen as
+                # "previously seen" to avoid inflating the ambiguity score with
+                # the new_screen_pattern factor (which assumes visual uncertainty).
+                _screen_seen = (
+                    source_result.source_type in ("uia", "dom")
+                    or self._fingerprint_store is not None
+                )
+
                 dec_ctx = DecisionContext(
                     task_id=task_id,
                     actions_so_far=ctx.action_count,
                     elapsed_seconds=time.monotonic() - ctx.started_at,
                     task_cost_usd=ctx.total_cost_usd,
                     daily_cost_usd=ctx.total_cost_usd,  # simplified
+                    screen_previously_seen=_screen_seen,
+                    used_fallback_transport=_used_fallback,
+                    screenshot=current_frame.data,
                 )
                 self._progress(ctx, f"Step {step}: deciding next action")
                 decision: Decision = await self._decision_engine.decide(
@@ -435,11 +513,15 @@ class TaskExecutor:
                     t_spec = TransportActionSpec(
                         action_type=decision.action_type,  # type: ignore[arg-type]
                         text=decision.value,
+                        coordinates=decision.target.coordinates,
                         task_id=task_id,
                         action_id=str(step),
                     )
+                    target_element = _resolve_uia_target(
+                        source_result, decision.target
+                    )
                     transport_result = await self._transport_resolver.execute(
-                        t_spec, source_result
+                        t_spec, source_result, target_element
                     )
                     # Record transport stats
                     if transport_result.method_used in _NATIVE_METHODS:
@@ -478,14 +560,7 @@ class TaskExecutor:
 
                 before_frame = current_frame
 
-                # 10. Cost tracking
-                if decision.cost_incurred > 0 and self._cost_tracker is not None:
-                    self._cost_tracker.record(
-                        task_id,
-                        model="unknown",
-                        input_tokens=0,
-                        output_tokens=0,
-                    )
+                # 10. Cost tracking (LLM cost already recorded by planner)
                 ctx.total_cost_usd += decision.cost_incurred
 
                 # 10b. Cost cap check
@@ -719,8 +794,11 @@ async def _default_perceive_fn(frame: Frame, source: SourceResult) -> Perception
 
 
 def _default_done_fn(decision: Decision) -> bool:
-    """Consider the task done when action_type is a completion verb."""
-    return decision.action_type in _SKIP_VERIFY_ACTIONS
+    """Consider the task done when action_type is a completion verb or task_status is complete."""
+    if decision.action_type in _DONE_ACTION_TYPES:
+        return True
+    task_status = getattr(decision, "task_status", "in_progress")
+    return task_status == "complete"
 
 
 # ---------------------------------------------------------------------------

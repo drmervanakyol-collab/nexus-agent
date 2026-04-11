@@ -139,6 +139,7 @@ class Decision:
     reasoning: str
     cost_incurred: float
     transport_hint: str | None
+    task_status: str = "in_progress"
 
 
 # ---------------------------------------------------------------------------
@@ -447,7 +448,7 @@ class DecisionEngine:
             cost_after = self._cost_before_fn(context.task_id)
             cost_incurred = max(0.0, cost_after - cost_before)
 
-            target = _target_from_plan(plan, transport_hint)
+            target = _target_from_plan(plan, transport_hint, perception)
             return Decision(
                 source="cloud",
                 action_type=plan.action_type,
@@ -457,6 +458,7 @@ class DecisionEngine:
                 reasoning=plan.reasoning,
                 cost_incurred=cost_incurred,
                 transport_hint=transport_hint,
+                task_status=plan.task_status,
             )
 
         # ------------------------------------------------------------------
@@ -497,11 +499,24 @@ def _action_from_affordance(affordance_name: str) -> str:
 def _target_from_plan(
     plan: PlannerDecision,
     transport_hint: str | None,
+    perception: "PerceptionResult | None" = None,
 ) -> TargetSpec:
-    """Build a TargetSpec from a PlannerDecision."""
+    """Build a TargetSpec from a PlannerDecision.
+
+    Looks up the target description in the spatial graph to resolve
+    pixel coordinates when perception data is available.
+    """
+    coords: tuple[int, int] | None = None
+
+    if perception is not None and plan.target_description:
+        node = perception.spatial_graph.find_best_target(plan.target_description)
+        if node is not None:
+            bb = node.element.bounding_box
+            coords = (bb.x + bb.width // 2, bb.y + bb.height // 2)
+
     return TargetSpec(
         element_id=plan.target_element_id,
-        coordinates=None,
+        coordinates=coords,
         description=plan.target_description,
         preferred_transport=transport_hint,  # type: ignore[arg-type]
     )

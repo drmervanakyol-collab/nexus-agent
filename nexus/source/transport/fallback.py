@@ -69,6 +69,26 @@ def _default_keyboard_type(text: str) -> None:
         ) from exc
 
 
+def _default_keyboard_press(key: str) -> None:
+    """
+    Press a single key or hotkey combination using the OS keyboard.
+
+    Examples: "win", "enter", "ctrl+c", "alt+f4"
+    """
+    try:
+        import pyautogui  # noqa: PLC0415
+
+        if "+" in key:
+            parts = [p.strip() for p in key.split("+")]
+            pyautogui.hotkey(*parts)
+        else:
+            pyautogui.press(key)
+    except ImportError as exc:
+        raise RuntimeError(
+            "KeyboardTransport requires pyautogui"
+        ) from exc
+
+
 # ---------------------------------------------------------------------------
 # MouseTransport
 # ---------------------------------------------------------------------------
@@ -129,9 +149,13 @@ class KeyboardTransport:
         self,
         *,
         _type_fn: Callable[[str], None] | None = None,
+        _press_fn: Callable[[str], None] | None = None,
     ) -> None:
         self._type_fn: Callable[[str], None] = (
             _type_fn or _default_keyboard_type
+        )
+        self._press_fn: Callable[[str], None] = (
+            _press_fn or _default_keyboard_press
         )
 
     async def type_text(self, text: str) -> bool:
@@ -146,4 +170,19 @@ class KeyboardTransport:
             return True
         except Exception as exc:
             _log.debug("keyboard_type_failed", error=str(exc))
+            return False
+
+    async def press_key(self, key: str) -> bool:
+        """
+        Press a single key or hotkey combination.
+
+        Examples: "win", "enter", "ctrl+c", "alt+f4"
+        Returns True on success, False on any OS-level error.
+        """
+        try:
+            await asyncio.to_thread(self._press_fn, key)
+            _log.debug("keyboard_press_ok", key=key)
+            return True
+        except Exception as exc:
+            _log.debug("keyboard_press_failed", key=key, error=str(exc))
             return False

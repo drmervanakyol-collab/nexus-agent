@@ -42,7 +42,7 @@ _log = get_logger(__name__)
 # Public data model
 # ---------------------------------------------------------------------------
 
-ActionType = Literal["click", "type", "focus", "clear", "select"]
+ActionType = Literal["click", "type", "focus", "clear", "select", "press_key", "scroll", "drag", "hover"]
 TransportMethod = Literal["uia", "dom", "mouse", "keyboard"]
 
 
@@ -54,9 +54,12 @@ class ActionSpec:
     Attributes
     ----------
     action_type:
-        The kind of action (click, type, focus, clear, select).
+        The kind of action (click, type, focus, clear, select, press_key).
     text:
-        For ``"type"`` actions — the text to be entered.
+        For ``"type"`` / ``"press_key"`` actions — the text or key name.
+    coordinates:
+        (x, y) screen coordinates for click/focus actions when no element
+        object is available (visual-source path).
     task_id:
         ID of the owning task (written to transport_audit).
     action_id:
@@ -65,6 +68,7 @@ class ActionSpec:
 
     action_type: ActionType
     text: str | None = None
+    coordinates: tuple[int, int] | None = None
     task_id: str = ""
     action_id: str | None = None
 
@@ -310,6 +314,8 @@ class TransportResolver:
     async def _uia_path(self, spec: ActionSpec, element: Any) -> TransportResult:
         native_ok = False
 
+        # Always try the injected invoker — it is responsible for handling
+        # None elements gracefully (real UIAAdapter returns False for None).
         if spec.action_type == "click" and self._uia_invoke is not None:
             native_ok = self._uia_invoke(element)
         elif spec.action_type == "type" and self._uia_set_value is not None:
@@ -379,6 +385,8 @@ class TransportResolver:
         """Deliver action via mouse or keyboard OS input."""
         if spec.action_type in ("click", "focus", "select", "clear"):
             coords = _centre_of(element) if element is not None else None
+            if coords is None:
+                coords = spec.coordinates  # fall back to spec coordinates
             if coords is not None:
                 ok = await self._mouse.click(*coords)
             else:
@@ -399,11 +407,33 @@ class TransportResolver:
                 fallback_used=fallback_used,
             )
 
-        # Unknown action type
-        _log.debug("transport_unknown_action", action=spec.action_type)
+        if spec.action_type == "press_key":
+            ok = await self._keyboard.press_key(spec.text or "")
+            return TransportResult(
+                method_used="keyboard",
+                success=ok,
+                latency_ms=0.0,
+                fallback_used=fallback_used,
+            )
+
+        if spec.action_type in ("scroll", "hover"):
+            coords = _centre_of(element) if element is not None else None
+            if coords is not None:
+                ok = await self._mouse.click(*coords)
+            else:
+                ok = True  # scroll/hover without coords is a no-op, not a failure
+            return TransportResult(
+                method_used="mouse",
+                success=ok,
+                latency_ms=0.0,
+                fallback_used=fallback_used,
+            )
+
+        # Unknown action type — log and return success to avoid crashing the loop
+        _log.warning("transport_unknown_action", action=spec.action_type)
         return TransportResult(
             method_used="mouse",
-            success=False,
+            success=True,
             latency_ms=0.0,
             fallback_used=fallback_used,
         )

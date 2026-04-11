@@ -106,8 +106,8 @@ class CloudSettings(BaseModel):
     primary_provider: Literal["openai", "anthropic"] = "openai"
     openai_model: str = "gpt-4o"
     openai_fallback_model: str = "gpt-4o-mini"
-    anthropic_model: str = "claude-3-5-sonnet-20241022"
-    anthropic_fallback_model: str = "claude-3-haiku-20240307"
+    anthropic_model: str = "claude-sonnet-4-5"
+    anthropic_fallback_model: str = "claude-haiku-4-5-20251001"
     max_tokens: int = 1000
     timeout_seconds: int = 30
     max_retries: int = 3
@@ -157,7 +157,15 @@ class BudgetSettings(BaseModel):
                 input_per_1k=self.claude_sonnet_input_per_1k,
                 output_per_1k=self.claude_sonnet_output_per_1k,
             ),
+            "claude-sonnet-4-5": ModelPricing(
+                input_per_1k=self.claude_sonnet_input_per_1k,
+                output_per_1k=self.claude_sonnet_output_per_1k,
+            ),
             "claude-3-haiku-20240307": ModelPricing(
+                input_per_1k=self.claude_haiku_input_per_1k,
+                output_per_1k=self.claude_haiku_output_per_1k,
+            ),
+            "claude-haiku-4-5-20251001": ModelPricing(
                 input_per_1k=self.claude_haiku_input_per_1k,
                 output_per_1k=self.claude_haiku_output_per_1k,
             ),
