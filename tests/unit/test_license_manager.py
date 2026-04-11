@@ -21,11 +21,9 @@ from nexus.release.license_manager import (
     TRIAL_DAILY_TASK_LIMIT,
     TRIAL_DAYS,
     LicenseManager,
-    LicenseResult,
     LicenseType,
     _b64url_decode,
     _b64url_encode,
-    _sign_payload,
 )
 
 # Capture the real (unpatched) generate_machine_id before any test-level patching.
@@ -282,7 +280,7 @@ class TestTrialStatus:
         assert status["expired"] is False
 
     def test_daily_counter_increments(self, lm: LicenseManager, trial_file: Path) -> None:
-        for i in range(3):
+        for _i in range(3):
             allowed = lm.increment_trial_task()
             assert allowed is True
         status = lm.trial_status()

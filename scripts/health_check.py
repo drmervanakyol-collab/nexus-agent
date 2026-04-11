@@ -86,15 +86,23 @@ def _render_check(result: CheckResult) -> None:
     print()
 
 
+def _safe_char(unicode_char: str, ascii_fallback: str) -> str:
+    """Return *unicode_char* if the console can encode it, else *ascii_fallback*."""
+    try:
+        unicode_char.encode(sys.stdout.encoding or "ascii")
+        return unicode_char
+    except (UnicodeEncodeError, LookupError):
+        return ascii_fallback
+
+
 def _render_report(report: HealthReport) -> None:
+    _h = _safe_char("═", "=") * 60
+    _d = _safe_char("─", "-") * 60
+
     print()
-    print(
-        _colour("═" * 60, _ANSI_BOLD)
-    )
-    print(
-        _colour("  NEXUS AGENT — SYSTEM HEALTH CHECK", _ANSI_BOLD)
-    )
-    print(_colour("═" * 60, _ANSI_BOLD))
+    print(_colour(_h, _ANSI_BOLD))
+    print(_colour("  NEXUS AGENT — SYSTEM HEALTH CHECK", _ANSI_BOLD))
+    print(_colour(_h, _ANSI_BOLD))
     print()
 
     for result in report.checks:
@@ -106,14 +114,14 @@ def _render_report(report: HealthReport) -> None:
         counts[r.status] += 1
 
     overall_colour = _status_colour(report.overall)
-    print(_colour("─" * 60, _ANSI_BOLD))
+    print(_colour(_d, _ANSI_BOLD))
     print(
         f"  Overall: {_colour(report.overall.upper(), overall_colour)}  "
         f"({_colour(str(counts['ok']), _ANSI_GREEN)} ok  "
         f"{_colour(str(counts['warn']), _ANSI_YELLOW)} warn  "
         f"{_colour(str(counts['fail']), _ANSI_RED)} fail)"
     )
-    print(_colour("─" * 60, _ANSI_BOLD))
+    print(_colour(_d, _ANSI_BOLD))
     print()
 
 

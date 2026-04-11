@@ -29,17 +29,18 @@ Output
 """
 from __future__ import annotations
 
-import atexit
 import argparse
 import ast
+import atexit
+import contextlib
 import copy
 import json
-import os
 import signal
 import subprocess
 import sys
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from datetime import UTC
 from pathlib import Path
 from typing import Any
 
@@ -53,10 +54,8 @@ _RESTORE_REGISTRY: dict[Path, str] = {}
 
 def _emergency_restore() -> None:
     for path, original in _RESTORE_REGISTRY.items():
-        try:
+        with contextlib.suppress(Exception):
             path.write_text(original, encoding="utf-8")
-        except Exception:
-            pass
 
 
 atexit.register(_emergency_restore)
@@ -68,10 +67,8 @@ def _signal_handler(signum: int, frame: object) -> None:
 
 
 signal.signal(signal.SIGTERM, _signal_handler)
-try:
+with contextlib.suppress(AttributeError, OSError):
     signal.signal(signal.SIGBREAK, _signal_handler)  # Windows Ctrl+Break
-except (AttributeError, OSError):
-    pass
 
 # ---------------------------------------------------------------------------
 # Mutation operators
@@ -201,7 +198,10 @@ class _MutantVisitor(ast.NodeTransformer):
                         src = ast.unparse(mutated)
                         self._mutations.append((
                             src,
-                            f"ROR line {node.lineno}: {orig_type.__name__} ->{mutant_type.__name__}",
+                            (
+                                f"ROR line {node.lineno}: "
+                                f"{orig_type.__name__} ->{mutant_type.__name__}"
+                            ),
                             node.lineno,
                         ))
                     except Exception:
@@ -351,10 +351,8 @@ def _apply_mutant_and_run(
         cache_dir = source_path.parent / "__pycache__"
         if cache_dir.exists():
             for pyc in cache_dir.glob(f"{source_path.stem}*.pyc"):
-                try:
+                with contextlib.suppress(OSError):
                     pyc.unlink()
-                except OSError:
-                    pass
         killed = not _run_tests(test_paths)
         return killed, ""
     except subprocess.TimeoutExpired:
@@ -387,8 +385,8 @@ def _write_markdown(result: dict[str, Any], out_path: Path) -> None:
         "# Nexus Agent — Mutation Test Report",
         f"\nGenerated: `{result['generated_at']}`  |  Status: **{status}**\n",
         "## Summary\n",
-        f"| Metric | Value |",
-        f"|--------|-------|",
+        "| Metric | Value |",
+        "|--------|-------|",
         f"| Total mutants | {total} |",
         f"| Killed | {killed} |",
         f"| Survived | {survived} |",
@@ -424,13 +422,13 @@ def run(
     max_mutants: int = 500,
     verbose: bool = False,
 ) -> dict[str, Any]:
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     print(f"[mutation] Collecting source files from: {source_paths}")
     source_files = _collect_python_files(source_paths)
     print(f"[mutation] Found {len(source_files)} source file(s)")
 
-    print(f"[mutation] Verifying baseline (all tests pass on unmodified code)...")
+    print("[mutation] Verifying baseline (all tests pass on unmodified code)...")
     if not _run_tests(test_paths):
         print("[mutation] ERROR: baseline tests fail — fix them first")
         sys.exit(2)
@@ -493,7 +491,7 @@ def run(
         print(f"[mutation] FAIL (< {threshold * 100:.0f}% threshold)")
 
     result = {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
         "total_mutants": total,
         "killed_mutants": killed,
         "survived_mutants": survived,

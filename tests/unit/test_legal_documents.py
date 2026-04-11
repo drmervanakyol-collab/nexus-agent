@@ -31,8 +31,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 # ---------------------------------------------------------------------------
 # Document paths
 # ---------------------------------------------------------------------------
@@ -281,7 +279,7 @@ class TestConsentVersioning:
 
     def test_current_version_consent_skips_onboarding(self) -> None:
         """A consent stored under the current version skips onboarding."""
-        from nexus.ui.onboarding import OnboardingFlow, _PRIVACY_VERSION, _TERMS_VERSION
+        from nexus.ui.onboarding import _PRIVACY_VERSION, _TERMS_VERSION, OnboardingFlow
 
         store = {
             f"privacy:{_PRIVACY_VERSION}": True,

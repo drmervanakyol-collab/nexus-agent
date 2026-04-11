@@ -57,7 +57,7 @@ _DEFAULT_MAX_MEMORY_BYTES: int = 512 * 1024 * 1024  # 512 MB
 def _default_memory_bytes() -> int:
     """Return current process RSS in bytes.  Returns 0 when psutil is absent."""
     try:
-        import psutil  # type: ignore[import-untyped]
+        import psutil  # noqa: PLC0415
 
         return psutil.Process().memory_info().rss  # type: ignore[no-any-return]
     except Exception:

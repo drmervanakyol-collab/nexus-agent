@@ -169,8 +169,8 @@ class TestCloudSettings:
         assert s.primary_provider == "openai"
         assert s.openai_model == "gpt-4o"
         assert s.openai_fallback_model == "gpt-4o-mini"
-        assert s.anthropic_model == "claude-3-5-sonnet-20241022"
-        assert s.anthropic_fallback_model == "claude-3-haiku-20240307"
+        assert s.anthropic_model == "claude-sonnet-4-5"
+        assert s.anthropic_fallback_model == "claude-haiku-4-5-20251001"
         assert s.max_tokens == 1000
         assert s.timeout_seconds == 30
         assert s.max_retries == 3

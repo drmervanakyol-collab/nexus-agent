@@ -42,9 +42,9 @@ import os
 import platform
 from dataclasses import dataclass, field
 from datetime import date, datetime
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
-from typing import Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +66,7 @@ _DEFAULT_KEY_PATH = Path.home() / ".nexus" / "license.key"
 # ---------------------------------------------------------------------------
 
 
-class LicenseType(str, Enum):
+class LicenseType(StrEnum):
     FULL = "full"
     TRIAL = "trial"
     NONE = "none"
@@ -76,7 +76,7 @@ class LicenseType(str, Enum):
 class LicenseResult:
     valid: bool
     license_type: LicenseType
-    expires: Optional[date]
+    expires: date | None
     message: str
     machine_id: str = field(default="")
 
@@ -162,17 +162,17 @@ def _trial_path() -> Path:
     return Path(env) if env else _DEFAULT_TRIAL_PATH
 
 
-def _load_trial_state() -> dict:
+def _load_trial_state() -> dict[str, Any]:
     path = _trial_path()
     if path.is_file():
         try:
-            return json.loads(path.read_text(encoding="utf-8"))
+            return json.loads(path.read_text(encoding="utf-8"))  # type: ignore[no-any-return]
         except (json.JSONDecodeError, OSError):
             pass
     return {}
 
 
-def _save_trial_state(state: dict) -> None:
+def _save_trial_state(state: dict[str, Any]) -> None:
     path = _trial_path()
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -199,7 +199,7 @@ class LicenseManager:
     """
 
     def __init__(self) -> None:
-        self._machine_id: Optional[str] = None
+        self._machine_id: str | None = None
 
     # ------------------------------------------------------------------
     # Machine identity
@@ -219,10 +219,7 @@ class LicenseManager:
         cpu = _wmi_cpu_serial()
         disk = _wmi_disk_serial()
 
-        if cpu or disk:
-            raw = f"{cpu}|{disk}"
-        else:
-            raw = _fallback_machine_components()
+        raw = f"{cpu}|{disk}" if cpu or disk else _fallback_machine_components()
 
         digest = hashlib.sha256(raw.encode()).hexdigest()
         self._machine_id = digest[:16]
@@ -236,7 +233,7 @@ class LicenseManager:
     def generate_key(
         machine_id: str,
         license_type: LicenseType = LicenseType.FULL,
-        expires: Optional[date] = None,
+        expires: date | None = None,
     ) -> str:
         """
         Generate a signed license key for *machine_id*.
@@ -334,7 +331,7 @@ class LicenseManager:
 
         # --- Expiry check ---
         exp_str = payload.get("exp", "")
-        expires: Optional[date] = None
+        expires: date | None = None
         if exp_str:
             try:
                 expires = date.fromisoformat(exp_str)
@@ -373,7 +370,7 @@ class LicenseManager:
     # Trial mode
     # ------------------------------------------------------------------
 
-    def trial_status(self) -> dict:
+    def trial_status(self) -> dict[str, Any]:
         """
         Return current trial state as a dict:
             started_on  : ISO date str or ""

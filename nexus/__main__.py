@@ -32,7 +32,9 @@ import os
 import signal
 import sys
 import uuid
+from datetime import UTC
 from pathlib import Path
+from typing import Any
 
 # ---------------------------------------------------------------------------
 # Version
@@ -113,7 +115,7 @@ def _check_license() -> bool:
 # ---------------------------------------------------------------------------
 
 
-def _build_provider(settings):  # type: ignore[no-untyped-def]
+def _build_provider(settings: Any) -> Any:
     """
     Build a cloud LLM provider from available API keys.
 
@@ -142,19 +144,19 @@ def _build_provider(settings):  # type: ignore[no-untyped-def]
     return AnthropicProvider(api_key=anthropic_key)
 
 
-def _pick_model(settings) -> str:  # type: ignore[no-untyped-def]
+def _pick_model(settings: Any) -> str:
     """Select the primary model based on available API keys and settings."""
     openai_key = os.environ.get("OPENAI_API_KEY", "")
     anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
 
     if openai_key:
-        return settings.cloud.openai_model
+        return str(settings.cloud.openai_model)
     if anthropic_key:
-        return settings.cloud.anthropic_model
-    return settings.cloud.openai_model  # fallback — error will be raised by provider
+        return str(settings.cloud.anthropic_model)
+    return str(settings.cloud.openai_model)  # fallback — error will be raised by provider
 
 
-def _build_decision_engine(settings, cost_tracker, task_id: str):  # type: ignore[no-untyped-def]
+def _build_decision_engine(settings: Any, cost_tracker: Any, task_id: str) -> Any:
     """Wire up DecisionEngine with all its dependencies."""
     from nexus.cloud.planner import CloudPlanner
     from nexus.cloud.prompt_builder import PromptBuilder
@@ -188,7 +190,7 @@ def _build_decision_engine(settings, cost_tracker, task_id: str):  # type: ignor
     )
 
 
-def _build_transport_resolver(settings, uia_adapter=None):  # type: ignore[no-untyped-def]
+def _build_transport_resolver(settings: Any, uia_adapter: Any = None) -> Any:
     """Build TransportResolver with real UIA/OS transports where available."""
     from nexus.source.transport.resolver import TransportResolver
 
@@ -198,14 +200,14 @@ def _build_transport_resolver(settings, uia_adapter=None):  # type: ignore[no-un
 
     _uia = uia_adapter
     if _uia is not None:
-        def uia_invoker(element):  # type: ignore[misc]
-            return _uia.invoke(element)
+        def uia_invoker(element: Any) -> bool:
+            return _uia.invoke(element)  # type: ignore[no-any-return]
 
-        def uia_value_setter(element, text):  # type: ignore[misc]
-            return _uia.set_value(element, text)
+        def uia_value_setter(element: Any, text: str) -> bool:
+            return _uia.set_value(element, text)  # type: ignore[no-any-return]
 
-        def uia_selector(element):  # type: ignore[misc]
-            return _uia.select(element)
+        def uia_selector(element: Any) -> bool:
+            return _uia.select(element)  # type: ignore[no-any-return]
 
     return TransportResolver(
         settings,
@@ -215,7 +217,7 @@ def _build_transport_resolver(settings, uia_adapter=None):  # type: ignore[no-un
     )
 
 
-def _try_create_uia_adapter(settings):  # type: ignore[no-untyped-def]
+def _try_create_uia_adapter(settings: Any) -> Any:
     """Create a UIAAdapter if comtypes/UIA is available; return None otherwise."""
     try:
         from nexus.source.uia.adapter import UIAAdapter  # noqa: PLC0415
@@ -227,14 +229,15 @@ def _try_create_uia_adapter(settings):  # type: ignore[no-untyped-def]
     return None
 
 
-def _build_source_fn(settings, uia_adapter):  # type: ignore[no-untyped-def]
+def _build_source_fn(settings: Any, uia_adapter: Any) -> Any:
     """Return an async source function that reuses the given UIAAdapter."""
     import ctypes
+
     from nexus.source.resolver import SourcePriorityResolver
 
     uia_probe = None
     if uia_adapter is not None:
-        def uia_probe(ctx):  # type: ignore[misc]
+        def uia_probe(ctx: dict[str, Any]) -> Any:
             hwnd = ctx.get("window_handle") or ctypes.windll.user32.GetForegroundWindow()
             if not hwnd:
                 return None
@@ -243,7 +246,7 @@ def _build_source_fn(settings, uia_adapter):  # type: ignore[no-untyped-def]
             # the resolver falls through to the visual fallback.
             return elements if elements else None
 
-    async def _source_fn():  # type: ignore[return]
+    async def _source_fn() -> Any:
         resolver = SourcePriorityResolver(settings, _uia_probe=uia_probe)
         return resolver.resolve({})
 
@@ -257,8 +260,8 @@ def _build_source_fn(settings, uia_adapter):  # type: ignore[no-untyped-def]
 
 async def _default_source_fn():  # type: ignore[no-untyped-def]
     """Fallback source function (used when no UIA adapter is available)."""
-    from nexus.source.resolver import SourcePriorityResolver
     from nexus.core.settings import NexusSettings
+    from nexus.source.resolver import SourcePriorityResolver
 
     settings = NexusSettings()
     resolver = SourcePriorityResolver(settings)
@@ -268,12 +271,14 @@ async def _default_source_fn():  # type: ignore[no-untyped-def]
 async def _default_capture_fn():  # type: ignore[no-untyped-def]
     """Capture the current screen frame."""
     import time
-    from datetime import datetime, timezone
-    from nexus.capture.frame import Frame
+    from datetime import datetime
+
     import numpy as np
 
+    from nexus.capture.frame import Frame
+
     now_monotonic = time.monotonic()
-    now_utc = datetime.now(timezone.utc).isoformat()
+    now_utc = datetime.now(UTC).isoformat()
 
     try:
         import dxcam  # noqa: PLC0415
@@ -306,16 +311,17 @@ async def _default_capture_fn():  # type: ignore[no-untyped-def]
 
 async def _default_perceive_fn(frame, source_result):  # type: ignore[no-untyped-def]
     """Build a PerceptionResult from a frame and source data."""
-    from nexus.perception.orchestrator import PerceptionOrchestrator
-    from nexus.perception.temporal.temporal_expert import TemporalExpert
+    from nexus.perception.arbitration.arbitrator import PerceptionArbitrator
     from nexus.perception.locator.locator import Locator
     from nexus.perception.matcher.matcher import Matcher
-    from nexus.perception.arbitration.arbitrator import PerceptionArbitrator
+    from nexus.perception.orchestrator import PerceptionOrchestrator
     from nexus.perception.reader.ocr_engine import TesseractOCREngine
+    from nexus.perception.temporal.temporal_expert import TemporalExpert
 
     def _null_ocr(image, lang, timeout):  # type: ignore[no-untyped-def]
         """No-op OCR — returns empty TSV when Tesseract is not installed."""
-        return "level\tpage_num\tblock_num\tpar_num\tline_num\tword_num\tleft\ttop\twidth\theight\tconf\ttext\n"
+        _hdr = "level\tpage_num\tblock_num\tpar_num\tline_num\tword_num"
+        return f"{_hdr}\tleft\ttop\twidth\theight\tconf\ttext\n"
 
     try:
         import subprocess
@@ -335,6 +341,89 @@ async def _default_perceive_fn(frame, source_result):  # type: ignore[no-untyped
 
 
 # ---------------------------------------------------------------------------
+# Optional component builders
+# ---------------------------------------------------------------------------
+
+
+def _build_health_checker(db_path: str) -> Any:
+    """Create HealthChecker; returns None on import error."""
+    try:
+        from nexus.infra.health import HealthChecker  # noqa: PLC0415
+        return HealthChecker(db_path=db_path)
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _build_fingerprint_store(db: Any, settings: Any) -> Any:
+    """Create FingerprintStore; returns None on import or init error."""
+    try:
+        from nexus.core.settings import NexusSettings  # noqa: PLC0415
+        from nexus.infra.database import Database  # noqa: PLC0415
+        from nexus.memory.fingerprint_store import FingerprintStore  # noqa: PLC0415
+        if isinstance(db, Database) and isinstance(settings, NexusSettings):
+            return FingerprintStore(db, settings)
+    except Exception:  # noqa: BLE001
+        pass
+    return None
+
+
+def _build_hitl_manager(db: Any, settings: Any) -> Any:
+    """Create HITLManager for interactive human-in-the-loop prompts."""
+    try:
+        from nexus.core.hitl_manager import HITLManager  # noqa: PLC0415
+        from nexus.core.settings import NexusSettings  # noqa: PLC0415
+        from nexus.infra.database import Database  # noqa: PLC0415
+        if isinstance(db, Database) and isinstance(settings, NexusSettings):
+            return HITLManager(db, settings.hitl)
+    except Exception:  # noqa: BLE001
+        pass
+    return None
+
+
+def _build_suspend_manager(db: Any) -> Any:
+    """Create SuspendManager for task suspension persistence."""
+    try:
+        from nexus.core.suspend_manager import SuspendManager  # noqa: PLC0415
+        from nexus.infra.database import Database  # noqa: PLC0415
+        if isinstance(db, Database):
+            return SuspendManager(db)
+    except Exception:  # noqa: BLE001
+        pass
+    return None
+
+
+def _build_verifier_fn() -> Any:
+    """
+    Return an async verifier_fn wrapping VisualVerifier.
+
+    Signature: (before_frame, after_frame, action_type) -> VerificationResult
+    Returns None when the verification module is unavailable.
+    """
+    try:
+        from nexus.verification import VerificationPolicy  # noqa: PLC0415
+        from nexus.verification.visual_verification import VisualVerifier  # noqa: PLC0415
+
+        verifier = VisualVerifier()
+        policy = VerificationPolicy()
+
+        from nexus.capture.frame import Frame  # noqa: PLC0415
+        from nexus.verification import VerificationMode, VerificationResult  # noqa: PLC0415
+
+        async def _verifier_fn(
+            before_frame: Any, after_frame: Any, action_type: str
+        ) -> Any:
+            if not isinstance(before_frame, Frame) or not isinstance(after_frame, Frame):
+                return VerificationResult(
+                    success=True, confidence=1.0, mode_used=VerificationMode.SKIP
+                )
+            return verifier.verify(before_frame, after_frame, policy)
+
+        return _verifier_fn
+    except Exception:  # noqa: BLE001
+        return None
+
+
+# ---------------------------------------------------------------------------
 # Task runner
 # ---------------------------------------------------------------------------
 
@@ -351,7 +440,7 @@ async def _run_task(goal: str, args: argparse.Namespace) -> int:
 
     # Settings
     config_path = args.config or ("nexus.toml" if Path("nexus.toml").exists() else None)
-    overrides: dict = {}
+    overrides: dict[str, Any] = {}
     if args.dry_run:
         overrides["safety"] = {"dry_run_mode": True}
     settings = load_settings(config_path, **overrides)
@@ -379,6 +468,16 @@ async def _run_task(goal: str, args: argparse.Namespace) -> int:
     source_fn = _build_source_fn(settings, uia_adapter) if uia_adapter else _default_source_fn
     transport_resolver = _build_transport_resolver(settings, uia_adapter)
 
+    # Optional components — wired when available, None otherwise
+    health_checker = _build_health_checker(db_path)
+    fingerprint_store = _build_fingerprint_store(db, settings)
+    hitl_manager = _build_hitl_manager(db, settings)
+    suspend_manager = _build_suspend_manager(db)
+    verifier_fn = _build_verifier_fn()
+
+    def _progress_fn(msg: str) -> None:
+        print(f"[nexus] {msg}", flush=True)
+
     executor = TaskExecutor(
         db=db,
         settings=settings,
@@ -388,6 +487,12 @@ async def _run_task(goal: str, args: argparse.Namespace) -> int:
         decision_engine=decision_engine,
         transport_resolver=transport_resolver,
         cost_tracker=cost_tracker,
+        health_checker=health_checker,
+        fingerprint_store=fingerprint_store,
+        hitl_manager=hitl_manager,
+        suspend_manager=suspend_manager,
+        verifier_fn=verifier_fn,
+        progress_fn=_progress_fn,
     )
 
     # Graceful SIGINT / SIGTERM → cancel current task
@@ -397,12 +502,10 @@ async def _run_task(goal: str, args: argparse.Namespace) -> int:
         log.info("interrupt_received", goal=goal)
         executor.cancel()
 
+    import contextlib
     for sig in (signal.SIGINT, signal.SIGTERM):
-        try:
+        with contextlib.suppress(NotImplementedError, OSError):
             loop.add_signal_handler(sig, _on_signal)
-        except (NotImplementedError, OSError):
-            # Windows event-loop signal handlers not always supported
-            pass
 
     log.info("task_starting", goal=goal, task_id=task_id)
     result = await executor.execute(goal, task_id=task_id)

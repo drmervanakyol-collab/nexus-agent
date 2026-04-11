@@ -509,11 +509,11 @@ def _uia_to_spatial_graph(uia_elements: list[Any], max_nodes: int = 500) -> Spat
 
         # --- Build a stable element ID ---
         raw_id = uia.automation_id or uia.name or f"uia-{i}"
-        elem_id = raw_id
+        elem_id: ElementId = ElementId(raw_id)
         counter = 0
         while elem_id in seen_ids:
             counter += 1
-            elem_id = f"{raw_id}-{counter}"
+            elem_id = ElementId(f"{raw_id}-{counter}")
         seen_ids.add(elem_id)
 
         # --- ElementType from UIA control-type integer ---

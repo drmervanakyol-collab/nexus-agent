@@ -24,7 +24,6 @@ from nexus.release.signing import (
     sign_release_binaries,
 )
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -92,9 +91,9 @@ class TestFindSigntool:
             patch("shutil.which", return_value=None),
             patch.object(Path, "is_dir", return_value=False),
             patch.object(Path, "is_file", return_value=False),
+            pytest.raises(FileNotFoundError, match="signtool.exe not found"),
         ):
-            with pytest.raises(FileNotFoundError, match="signtool.exe not found"):
-                _find_signtool()
+            _find_signtool()
 
 
 # ---------------------------------------------------------------------------
@@ -192,10 +191,10 @@ class TestSignBinary:
             patch("shutil.which", return_value=None),
             patch.object(Path, "is_dir", return_value=False),
             patch.object(Path, "is_file", side_effect=lambda self=None: self == fake_binary if self else False),
+            patch.object(signing_mod, "_find_signtool", side_effect=FileNotFoundError("not found")),
         ):
             # patch _find_signtool directly to keep test simple
-            with patch.object(signing_mod, "_find_signtool", side_effect=FileNotFoundError("not found")):
-                result = sign_binary(fake_binary)
+            result = sign_binary(fake_binary)
         assert result is False
 
     def test_success_path(

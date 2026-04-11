@@ -16,10 +16,9 @@ TEST 7 — Gerçek ürün değeri: PDF → Excel → SafeRowWrite → audit trai
 """
 from __future__ import annotations
 
-import asyncio
 import time
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, call, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import numpy as np
 import pytest
@@ -27,9 +26,9 @@ import pytest
 from nexus.capture.frame import Frame
 from nexus.core.settings import NexusSettings
 from nexus.core.suspend_manager import SuspendManager
-from nexus.core.task_executor import TaskExecutor, TaskResult, TransportStats
+from nexus.core.task_executor import TaskExecutor
 from nexus.core.types import Rect
-from nexus.decision.engine import Decision, DecisionContext, DecisionEngine, TargetSpec
+from nexus.decision.engine import Decision, DecisionEngine, TargetSpec
 from nexus.infra.database import Database
 from nexus.memory.fingerprint_store import FingerprintStore
 from nexus.perception.arbitration.arbitrator import ArbitrationResult
@@ -39,6 +38,8 @@ from nexus.perception.temporal.temporal_expert import ScreenState, StateType
 from nexus.source.resolver import SourceResult
 from nexus.source.transport.resolver import (
     ActionSpec as TransportActionSpec,
+)
+from nexus.source.transport.resolver import (
     TransportResolver,
     TransportResult,
 )
@@ -839,7 +840,6 @@ class TestGercekUrunDegeri:
 
     def test_pdf_extract_field_finds_value(self) -> None:
         """PDFExtractor.extract_field() locates a value by regex."""
-        from nexus.skills.pdf.extractor import PDFExtractor
 
         content_dict = {
             "source_type": "pdf_text",

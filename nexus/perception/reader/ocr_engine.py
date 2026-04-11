@@ -202,7 +202,7 @@ def _default_run_tesseract(
 def _detect_language(text: str) -> str:
     """Detect the primary language of *text* using langdetect."""
     try:
-        from langdetect import detect  # type: ignore[import-untyped]
+        from langdetect import detect  # noqa: PLC0415
 
         return detect(text)  # type: ignore[no-any-return]
     except Exception:

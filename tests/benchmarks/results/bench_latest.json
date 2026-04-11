@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-09T21:06:03.432003+00:00",
+  "generated_at": "2026-04-11T23:12:55.657312+00:00",
   "all_passed": true,
   "results": [
     {
@@ -8,7 +8,7 @@
       "unit": "FPS",
       "target_value": 10.0,
       "higher_is_better": true,
-      "measured_value": 5044844.1397,
+      "measured_value": 4945055.2479,
       "passed": true,
       "samples_count": 1,
       "extra": {
@@ -23,14 +23,14 @@
       "unit": "ms",
       "target_value": 200.0,
       "higher_is_better": false,
-      "measured_value": 0.1704,
+      "measured_value": 0.1316,
       "passed": true,
       "samples_count": 100,
       "extra": {
-        "avg_ms": 0.17,
-        "p95_ms": 0.162,
-        "min_ms": 0.116,
-        "max_ms": 4.416,
+        "avg_ms": 0.132,
+        "p95_ms": 0.215,
+        "min_ms": 0.112,
+        "max_ms": 0.314,
         "decisions": 100
       }
     },
@@ -47,9 +47,9 @@
         "successes": 10,
         "total_runs": 10,
         "success_rate_pct": 100.0,
-        "avg_run_ms": 32.82,
-        "min_run_ms": 30.95,
-        "max_run_ms": 34.61
+        "avg_run_ms": 34.23,
+        "min_run_ms": 30.6,
+        "max_run_ms": 38.98
       }
     },
     {
@@ -58,22 +58,22 @@
       "unit": "MB",
       "target_value": 50.0,
       "higher_is_better": false,
-      "measured_value": 0.0128,
+      "measured_value": 0.014,
       "passed": true,
       "samples_count": 1,
       "extra": {
-        "growth_mb": 0.013,
+        "growth_mb": 0.014,
         "iterations": 9000,
-        "elapsed_s": 3.01,
+        "elapsed_s": 3.5,
         "simulated_minutes": 30.0,
         "top_leaks": [
           {
             "location": "C:\\Users\\Mervan\\AppData\\Local\\Programs\\Python\\Python314\\Lib\\site-packages\\structlog\\processors.py:557",
-            "size_kb": 7.1
+            "size_kb": 9.2
           },
           {
-            "location": "C:\\Users\\Mervan\\nexus-agent\\tests\\benchmarks\\bench_memory_soak.py:61",
-            "size_kb": 5.3
+            "location": "C:\\Users\\Mervan\\nexus-agent\\tests\\benchmarks\\bench_memory_soak.py:62",
+            "size_kb": 4.4
           },
           {
             "location": "C:\\Users\\Mervan\\AppData\\Local\\Programs\\Python\\Python314\\Lib\\tracemalloc.py:560",
@@ -84,7 +84,7 @@
             "size_kb": 0.3
           },
           {
-            "location": "C:\\Users\\Mervan\\nexus-agent\\tests\\benchmarks\\bench_memory_soak.py:132",
+            "location": "C:\\Users\\Mervan\\nexus-agent\\tests\\benchmarks\\bench_memory_soak.py:133",
             "size_kb": 0.0
           }
         ]
@@ -102,7 +102,7 @@
       "extra": {
         "avg_accuracy_pct": 100.0,
         "min_accuracy_pct": 100.0,
-        "avg_latency_ms": 28.974,
+        "avg_latency_ms": 29.308,
         "images": 20
       }
     },
@@ -112,14 +112,14 @@
       "unit": "ms",
       "target_value": 500.0,
       "higher_is_better": false,
-      "measured_value": 0.122,
+      "measured_value": 0.1209,
       "passed": true,
       "samples_count": 50,
       "extra": {
-        "avg_ms": 0.122,
-        "p95_ms": 0.145,
+        "avg_ms": 0.121,
+        "p95_ms": 0.128,
         "min_ms": 0.111,
-        "max_ms": 0.248,
+        "max_ms": 0.417,
         "frames": 50
       }
     },
@@ -127,17 +127,17 @@
       "name": "transport_latency_comparison",
       "target_label": "UIA avg < mouse avg (native advantage)",
       "unit": "ms",
-      "target_value": 0.24222600273787975,
+      "target_value": 0.23568300064653158,
       "higher_is_better": false,
-      "measured_value": 0.1116,
+      "measured_value": 0.1144,
       "passed": true,
       "samples_count": 100,
       "extra": {
-        "uia_avg_ms": 0.1116,
-        "mouse_avg_ms": 0.2422,
-        "uia_p95_ms": 0.1306,
-        "mouse_p95_ms": 0.3124,
-        "speedup_ratio": 2.17,
+        "uia_avg_ms": 0.1144,
+        "mouse_avg_ms": 0.2357,
+        "uia_p95_ms": 0.1369,
+        "mouse_p95_ms": 0.3214,
+        "speedup_ratio": 2.06,
         "iterations": 100
       }
     }

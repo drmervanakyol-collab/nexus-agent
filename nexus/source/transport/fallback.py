@@ -28,13 +28,40 @@ _log = get_logger(__name__)
 # ---------------------------------------------------------------------------
 
 
+def _focus_window_at(x: int, y: int) -> None:
+    """
+    Bring the window at screen coordinates (x, y) to the foreground.
+
+    Uses Win32 WindowFromPoint + SetForegroundWindow.  Silently ignored
+    when the API is unavailable (non-Windows or missing ctypes).
+    """
+    try:
+        import ctypes  # noqa: PLC0415
+        import ctypes.wintypes  # noqa: PLC0415
+        import time  # noqa: PLC0415
+
+        pt = ctypes.wintypes.POINT(x, y)
+        hwnd = ctypes.windll.user32.WindowFromPoint(pt)
+        if hwnd:
+            ctypes.windll.user32.SetForegroundWindow(hwnd)
+            time.sleep(0.05)  # allow window manager to process focus change
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def _default_mouse_click(x: int, y: int) -> None:
     """
-    Move the mouse to (x, y) and click the left button.
+    Bring the target window to foreground, then click at (x, y).
 
-    Tries pyautogui first; falls back to pywin32 SendInput.
+    Focuses the window under the cursor before dispatching input so that
+    SendInput / pyautogui events land on the correct target even when another
+    application currently holds focus.
+
+    Tries pyautogui first; falls back to pywin32.
     Raises RuntimeError if neither is available.
     """
+    _focus_window_at(x, y)
+
     try:
         import pyautogui  # noqa: PLC0415
 

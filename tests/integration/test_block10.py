@@ -116,6 +116,7 @@ def _load_mutation_runner():
         inserted = True
     try:
         import importlib
+
         import run_mutation  # type: ignore[import-not-found]
         importlib.reload(run_mutation)
         return run_mutation
@@ -171,9 +172,8 @@ class TestCoverageGate:
         mod = _load_check_coverage_module()
         missing = tmp_path / "nonexistent_coverage.json"
 
-        with patch.object(mod, "COVERAGE_JSON", missing):
-            with pytest.raises(SystemExit) as exc_info:
-                mod.main()
+        with patch.object(mod, "COVERAGE_JSON", missing), pytest.raises(SystemExit) as exc_info:
+            mod.main()
 
         assert exc_info.value.code == 1
 
@@ -242,8 +242,8 @@ class TestBenchmarkRegression:
 
     def test_regression_section_in_markdown(self, tmp_path: Path) -> None:
         """write_report() includes 'Regressions Detected' when baseline is better."""
-        from tests.benchmarks.conftest import BenchmarkRecord
         from tests.benchmarks import bench_report as br
+        from tests.benchmarks.conftest import BenchmarkRecord
 
         # Baseline: latency was 50 ms (good)
         baseline = {
@@ -296,8 +296,8 @@ class TestBenchmarkRegression:
 
     def test_no_regression_within_threshold(self, tmp_path: Path) -> None:
         """write_report() does NOT add regression section when delta <= 10%."""
-        from tests.benchmarks.conftest import BenchmarkRecord
         from tests.benchmarks import bench_report as br
+        from tests.benchmarks.conftest import BenchmarkRecord
 
         baseline = {
             "generated_at": "2026-04-01T00:00:00",
@@ -430,6 +430,7 @@ class TestPropertyTestFailureDetection:
         """
         from hypothesis import given, settings
         from hypothesis import strategies as st
+
         from nexus.core.types import Rect
 
         def _broken_area(self: Rect) -> int:
@@ -462,6 +463,7 @@ class TestPropertyTestFailureDetection:
         """The real area() survives 50 Hypothesis examples."""
         from hypothesis import given, settings
         from hypothesis import strategies as st
+
         from nexus.core.types import Rect
 
         @given(
@@ -651,8 +653,8 @@ class TestTransportBenchmarkRegression:
         write_report() includes 'Regressions Detected' when a baseline run
         shows UIA was faster but the current run has UIA slower.
         """
-        from tests.benchmarks.conftest import BenchmarkRecord
         from tests.benchmarks import bench_report as br
+        from tests.benchmarks.conftest import BenchmarkRecord
 
         baseline = {
             "generated_at": "2026-04-01T00:00:00",

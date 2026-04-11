@@ -27,9 +27,9 @@ import json
 import os
 import subprocess
 import sys
-from dataclasses import dataclass, field
+from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
 
 # ---------------------------------------------------------------------------
 # Repo root (scripts/ is one level below root)
@@ -53,13 +53,12 @@ _MAGENTA = "\033[35m"
 
 def _enable_ansi() -> None:
     if sys.platform == "win32":
+        import contextlib
         import ctypes
-        try:
+        with contextlib.suppress(Exception):
             ctypes.windll.kernel32.SetConsoleMode(  # type: ignore[attr-defined]
                 ctypes.windll.kernel32.GetStdHandle(-11), 7
             )
-        except Exception:  # noqa: BLE001
-            pass
 
 
 def _c(text: str, colour: str) -> str:
@@ -111,7 +110,7 @@ def _run_pytest(
         env=env,
     )
     # Last non-empty line of stdout is the summary (e.g. "42 passed in 3.1s")
-    lines = [l for l in result.stdout.splitlines() if l.strip()]
+    lines = [ln for ln in result.stdout.splitlines() if ln.strip()]
     summary = lines[-1] if lines else result.stderr.strip()[:120]
     return result.returncode == 0, summary
 
@@ -168,7 +167,7 @@ def check_health() -> CheckResult:
     )
     # exit 0 = ok, 1 = warn (acceptable), 2 = fail
     passed = result.returncode < 2
-    lines = [l for l in result.stdout.splitlines() if "Overall:" in l]
+    lines = [ln for ln in result.stdout.splitlines() if "Overall:" in ln]
     detail = lines[0].strip() if lines else f"exit {result.returncode}"
     return CheckResult("health", "health_check.py → healthy", passed=passed, detail=detail)
 
@@ -317,7 +316,9 @@ def check_diagnostic() -> CheckResult:
     except ImportError as exc:
         passed = False
         detail = str(exc)
-    return CheckResult("diagnostic", "Diagnostic ZIP (transport_audit)", passed=passed, detail=detail)
+    return CheckResult(
+        "diagnostic", "Diagnostic ZIP (transport_audit)", passed=passed, detail=detail
+    )
 
 
 def check_installer_config() -> CheckResult:
@@ -325,13 +326,16 @@ def check_installer_config() -> CheckResult:
     iss = _ROOT / "installer" / "nexus_agent.iss"
     passed = iss.is_file()
     detail = str(iss) if passed else f"Missing: {iss}"
-    return CheckResult("installer", "Installer config (clean-VM install)", passed=passed, detail=detail)
+    return CheckResult(
+        "installer", "Installer config (clean-VM install)", passed=passed, detail=detail
+    )
 
 
 def check_code_signing() -> CheckResult:
     """Code signing module importable (sign_binary API present)."""
     try:
-        from nexus.release.signing import sign_binary
+        import nexus.release.signing as _sm  # noqa: PLC0415
+        _ = _sm.sign_binary  # confirm API exists
         detail = "nexus.release.signing.sign_binary OK"
         passed = True
     except ImportError as exc:
@@ -519,7 +523,8 @@ class PilotChecklist:
             print(_c(f"  [DRY-RUN] Would create git tag: {tag}", _YELLOW))
             return
 
-        ok, detail = _git_tag(tag, f"Nexus Agent {tag} — Release Candidate (Pilot Acceptance passed)")
+        msg = f"Nexus Agent {tag} — Release Candidate (Pilot Acceptance passed)"
+        ok, detail = _git_tag(tag, msg)
         if ok:
             print(_c(f"  ✔  git tag {tag!r} created.", _GREEN))
         else:

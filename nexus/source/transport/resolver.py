@@ -42,7 +42,9 @@ _log = get_logger(__name__)
 # Public data model
 # ---------------------------------------------------------------------------
 
-ActionType = Literal["click", "type", "focus", "clear", "select", "press_key", "scroll", "drag", "hover"]
+ActionType = Literal[
+    "click", "type", "focus", "clear", "select", "press_key", "scroll", "drag", "hover"
+]
 TransportMethod = Literal["uia", "dom", "mouse", "keyboard"]
 
 

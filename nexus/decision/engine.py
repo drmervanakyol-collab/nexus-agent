@@ -499,7 +499,7 @@ def _action_from_affordance(affordance_name: str) -> str:
 def _target_from_plan(
     plan: PlannerDecision,
     transport_hint: str | None,
-    perception: "PerceptionResult | None" = None,
+    perception: PerceptionResult | None = None,
 ) -> TargetSpec:
     """Build a TargetSpec from a PlannerDecision.
 

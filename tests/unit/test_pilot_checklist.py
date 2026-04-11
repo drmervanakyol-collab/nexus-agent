@@ -13,7 +13,6 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
-from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -45,7 +44,6 @@ from pilot_checklist import (
     check_scenario_007,
     check_transport_benchmark,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
