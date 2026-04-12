@@ -120,6 +120,22 @@ class TestSafetyScan:
         if not stdout:
             pytest.skip("safety check produced no output (network issue or API key required)")
 
+        # safety ≥ 2.x wraps the JSON block with deprecation banners (before
+        # and after).  Extract only the JSON by slicing from the first { or [
+        # to the last } or ] so the surrounding banner text is ignored.
+        json_start = next(
+            (i for i, ch in enumerate(stdout) if ch in "{["),
+            None,
+        )
+        if json_start is None:
+            pytest.skip(f"safety output not parseable: {stdout[:200]}")
+        open_ch = stdout[json_start]
+        close_ch = "}" if open_ch == "{" else "]"
+        json_end = stdout.rfind(close_ch)
+        if json_end == -1:
+            pytest.skip(f"safety output not parseable: {stdout[:200]}")
+        stdout = stdout[json_start : json_end + 1]
+
         try:
             report = json.loads(stdout)
         except json.JSONDecodeError:
@@ -137,7 +153,7 @@ class TestSafetyScan:
 
         critical_vulns = [
             v for v in vulns
-            if isinstance(v, dict) and v.get("severity", "").upper() in ("CRITICAL", "HIGH")
+            if isinstance(v, dict) and (v.get("severity") or "").upper() in ("CRITICAL", "HIGH")
         ]
 
         assert len(critical_vulns) == 0, (
