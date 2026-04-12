@@ -112,7 +112,7 @@ class CancelHandler:
     # SIGINT handler
     # ------------------------------------------------------------------
 
-    def _handle_sigint(self, signum: int, frame: Any) -> None:
+    def _handle_sigint(self, _signum: int, frame: Any) -> None:
         if not self._cancel_requested:
             # First Ctrl+C — graceful cancel
             self._cancel_requested = True
