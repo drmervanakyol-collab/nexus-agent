@@ -806,9 +806,7 @@ def _default_done_fn(decision: Decision) -> bool:
     if task_status == "complete":
         return True
     # Safety-net: cloud planner returning "none" means it has no further actions.
-    if decision.action_type == "none" and getattr(decision, "source", "") == "cloud":
-        return True
-    return False
+    return decision.action_type == "none" and getattr(decision, "source", "") == "cloud"
 
 
 # ---------------------------------------------------------------------------
