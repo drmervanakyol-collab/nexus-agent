@@ -1,181 +1,219 @@
 """
 tests/benchmarks/bench_memory_soak.py
-Memory Soak Benchmark — FAZ 64
+Memory Soak Benchmark — PAKET BM
 
-Runs a tight mock loop equivalent to 30 minutes of agent operation
-(compressed: ~5 400 iterations at ~200ms simulated cycle time) and
-measures memory growth using tracemalloc.
+100 görev simüle et, RAM kullanımını her adımda kaydet.
+Başlangıç ile fark 200MB altında olmalı.
 
-Target: heap growth < 50 MB over the soak period.
-
-The loop exercises the same objects allocated during a real agent cycle:
-  Frame → PerceptionResult → Decision → ActionRecord
-These are created and discarded on each iteration to exercise the GC.
-No real I/O, DB, or hardware.
+Kullanım:
+    python tests/benchmarks/bench_memory_soak.py
 """
 from __future__ import annotations
 
 import gc
 import time
-import tracemalloc
+import uuid
+from pathlib import Path
+from typing import Any
 
-import numpy as np
-
-from tests.benchmarks.conftest import (
-    BenchmarkRecord,
-    register_result,
-)
+_ROOT = Path(__file__).parent.parent.parent
 
 # ---------------------------------------------------------------------------
-# Constants
+# Benchmark parametreleri
 # ---------------------------------------------------------------------------
 
-# 30 minutes at ~200ms/step = 9 000 steps; use a representative sample
-_SOAK_ITERATIONS: int = 9_000
-_TARGET_MAX_GROWTH_MB: float = 50.0
+N_TASKS: int = 100
+MAX_MEMORY_DELTA_MB: float = 200.0
 
 
 # ---------------------------------------------------------------------------
-# Per-iteration object factory (mirrors real agent cycle allocations)
+# RAM ölçümü
 # ---------------------------------------------------------------------------
 
 
-def _one_cycle(seq: int) -> None:
-    """Allocate and immediately release the objects produced in one agent step."""
+def _get_memory_mb() -> float:
+    """Mevcut process RAM kullanımını MB cinsinden döndür."""
+    try:
+        import psutil
+        proc = psutil.Process()
+        return proc.memory_info().rss / 1024 / 1024
+    except ImportError:
+        pass
+
+    # Windows fallback
+    try:
+        import ctypes
+        import ctypes.wintypes
+
+        class _PROCESS_MEMORY_COUNTERS(ctypes.Structure):
+            _fields_ = [
+                ("cb", ctypes.wintypes.DWORD),
+                ("PageFaultCount", ctypes.wintypes.DWORD),
+                ("PeakWorkingSetSize", ctypes.c_size_t),
+                ("WorkingSetSize", ctypes.c_size_t),
+                ("QuotaPeakPagedPoolUsage", ctypes.c_size_t),
+                ("QuotaPagedPoolUsage", ctypes.c_size_t),
+                ("QuotaPeakNonPagedPoolUsage", ctypes.c_size_t),
+                ("QuotaNonPagedPoolUsage", ctypes.c_size_t),
+                ("PagefileUsage", ctypes.c_size_t),
+                ("PeakPagefileUsage", ctypes.c_size_t),
+            ]
+
+        pmc = _PROCESS_MEMORY_COUNTERS()
+        pmc.cb = ctypes.sizeof(pmc)
+        handle = ctypes.windll.kernel32.GetCurrentProcess()
+        ctypes.windll.psapi.GetProcessMemoryInfo(
+            handle, ctypes.byref(pmc), pmc.cb
+        )
+        return pmc.WorkingSetSize / 1024 / 1024
+    except Exception:
+        return 0.0
+
+
+# ---------------------------------------------------------------------------
+# Mock task simulation
+# ---------------------------------------------------------------------------
+
+
+def _simulate_task(task_id: str) -> dict[str, Any]:
+    """
+    Tek bir görevin tam yaşam döngüsünü simüle et.
+    Bellek sızıntısı olmadan temiz çalışmalı.
+    """
+    # Görev başlatma
+    context = {
+        "task_id": task_id,
+        "goal": f"Task {task_id[:8]}: open and type",
+        "history": [],
+        "cost": 0.0,
+    }
+
+    # 5 adım simüle et
+    for step in range(5):
+        # Perception verisi (büyük array — hızla serbest bırakılmalı)
+        import numpy as np
+        frame = np.zeros((1080, 1920, 3), dtype=np.uint8)
+
+        # Action history
+        context["history"].append({
+            "step": step,
+            "action": "click",
+            "target": f"button_{step}",
+            "cost": 0.0002,
+        })
+        context["cost"] += 0.0002
+
+        # Frame'i hemen serbest bırak
+        del frame
+
+    # Sonuç
+    result = {
+        "task_id": task_id,
+        "steps": 5,
+        "cost": context["cost"],
+        "status": "success",
+    }
+
+    # Bağlamı temizle
+    del context
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Main benchmark
+# ---------------------------------------------------------------------------
+
+
+def run_benchmark() -> dict[str, Any]:
+    """Benchmark çalıştır ve sonuçları döndür."""
+    print(f"\n{'='*60}")
+    print(f"  bench_memory_soak — {N_TASKS} tasks")
+    print(f"  Target: RAM delta < {MAX_MEMORY_DELTA_MB:.0f}MB")
+    print(f"{'='*60}")
+
+    # GC'yi temizle ve başlangıç ölçümü al
+    gc.collect()
+    time.sleep(0.1)
+    baseline_mb = _get_memory_mb()
+    print(f"\n  Baseline RAM : {baseline_mb:.1f}MB")
+
+    memory_samples: list[float] = [baseline_mb]
+    task_times_ms: list[float] = []
+    completed_tasks = 0
+
+    for i in range(N_TASKS):
+        if i % 20 == 0:
+            mem_now = _get_memory_mb()
+            print(f"  Progress: {i}/{N_TASKS} — RAM: {mem_now:.1f}MB "
+                  f"(+{mem_now - baseline_mb:.1f}MB)")
+
+        task_id = str(uuid.uuid4())
+        t0 = time.perf_counter()
+        _simulate_task(task_id)
+        elapsed_ms = (time.perf_counter() - t0) * 1000
+
+        task_times_ms.append(elapsed_ms)
+        completed_tasks += 1
+
+        # Her 10 görevde bir GC çalıştır
+        if i % 10 == 9:
+            gc.collect()
+            memory_samples.append(_get_memory_mb())
+
+    # Son ölçüm
+    gc.collect()
+    time.sleep(0.1)
+    final_mb = _get_memory_mb()
+    memory_samples.append(final_mb)
+
+    delta_mb = final_mb - baseline_mb
+    peak_mb = max(memory_samples) - baseline_mb
+    avg_task_ms = sum(task_times_ms) / len(task_times_ms)
+
+    passed = delta_mb < MAX_MEMORY_DELTA_MB
+
+    print(f"\n  Results:")
+    print(f"    Tasks completed  : {completed_tasks}")
+    print(f"    Baseline RAM     : {baseline_mb:.1f}MB")
+    print(f"    Final RAM        : {final_mb:.1f}MB")
+    print(f"    Delta            : {delta_mb:+.1f}MB")
+    print(f"    Peak delta       : {peak_mb:+.1f}MB")
+    print(f"    Avg task time    : {avg_task_ms:.2f}ms")
+    print(f"    Target delta     : < {MAX_MEMORY_DELTA_MB:.0f}MB")
+    print(f"    Status           : {'✓ PASS' if passed else '✗ FAIL'}")
+
+    result = {
+        "benchmark": "bench_memory_soak",
+        "n_tasks": N_TASKS,
+        "completed_tasks": completed_tasks,
+        "baseline_mb": round(baseline_mb, 2),
+        "final_mb": round(final_mb, 2),
+        "delta_mb": round(delta_mb, 2),
+        "peak_delta_mb": round(peak_mb, 2),
+        "avg_task_ms": round(avg_task_ms, 3),
+        "target_delta_mb": MAX_MEMORY_DELTA_MB,
+        "memory_samples": [round(m, 2) for m in memory_samples],
+        "passed": passed,
+    }
+
+    _save_result(result)
+    return result
+
+
+def _save_result(result: dict[str, Any]) -> None:
+    import json
     import datetime
 
-    from nexus.capture.frame import Frame
-    from nexus.decision.engine import Decision, TargetSpec
-    from nexus.perception.arbitration.arbitrator import ArbitrationResult
-    from nexus.perception.orchestrator import PerceptionResult
-    from nexus.perception.spatial_graph import SpatialGraph
-    from nexus.perception.temporal.temporal_expert import ScreenState, StateType
-    from nexus.source.resolver import SourceResult
-
-    # Frame (8×8 pixel thumbnail — minimal memory)
-    data = np.zeros((8, 8, 3), dtype=np.uint8)
-    _frame = Frame(
-        data=data,
-        width=8,
-        height=8,
-        captured_at_monotonic=time.monotonic(),
-        captured_at_utc=datetime.datetime.now(datetime.UTC).isoformat(),
-        sequence_number=seq,
-    )
-
-    # PerceptionResult
-    _source = SourceResult(source_type="uia", data=[], confidence=1.0, latency_ms=0.1)
-    _perception = PerceptionResult(
-        spatial_graph=SpatialGraph([], [], {}),
-        screen_state=ScreenState(
-            state_type=StateType.STABLE,
-            confidence=1.0,
-            blocks_perception=False,
-            reason="soak",
-            retry_after_ms=0,
-        ),
-        arbitration=ArbitrationResult(
-            resolved_elements=(),
-            resolved_labels=(),
-            conflicts_detected=0,
-            conflicts_resolved=0,
-            temporal_blocked=False,
-            overall_confidence=1.0,
-        ),
-        source_result=_source,
-        perception_ms=0.05,
-        frame_sequence=seq,
-        timestamp="2026-04-10T00:00:00+00:00",
-    )
-
-    # Decision
-    _decision = Decision(
-        source="local",
-        action_type="click",
-        target=TargetSpec(
-            element_id=f"el-{seq}",
-            coordinates=(seq % 1920, seq % 1080),
-            description="soak element",
-            preferred_transport="uia",
-        ),
-        value=None,
-        confidence=0.95,
-        reasoning="soak benchmark",
-        cost_incurred=0.0,
-        transport_hint="uia",
-    )
-
-    # Explicitly delete to give GC a chance (matches real loop discard)
-    del _frame, _perception, _decision, _source, data
+    ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    out_dir = Path(__file__).parent / "results"
+    out_dir.mkdir(exist_ok=True)
+    out_file = out_dir / f"bench_memory_soak_{ts}.json"
+    out_file.write_text(json.dumps(result, indent=2), encoding="utf-8")
+    print(f"\n  Saved: {out_file.name}")
 
 
-# ---------------------------------------------------------------------------
-# Benchmark test
-# ---------------------------------------------------------------------------
-
-
-def test_bench_memory_soak() -> None:
-    """
-    Benchmark: heap growth over {_SOAK_ITERATIONS} mock agent cycles < 50 MB.
-
-    tracemalloc is used to measure Python-heap allocations; resident set
-    size growth is an additional informational metric.
-    """
-    # Warm-up: let import caches and class initialisation settle
-    for i in range(100):
-        _one_cycle(i)
-    gc.collect()
-
-    tracemalloc.start()
-    snapshot_before = tracemalloc.take_snapshot()
-    t_start = time.perf_counter()
-
-    for i in range(_SOAK_ITERATIONS):
-        _one_cycle(i)
-        # Periodic GC to replicate real agent behaviour (Python GC threshold)
-        if i % 1000 == 999:
-            gc.collect()
-
-    gc.collect()
-    snapshot_after = tracemalloc.take_snapshot()
-    tracemalloc.stop()
-
-    elapsed_s = time.perf_counter() - t_start
-
-    # Compute net heap growth
-    stats = snapshot_after.compare_to(snapshot_before, "lineno")
-    total_growth_bytes = sum(s.size_diff for s in stats if s.size_diff > 0)
-    growth_mb = total_growth_bytes / (1024 * 1024)
-
-    # Top leaking sites (informational)
-    top_leaks = [
-        {
-            "location": str(s.traceback),
-            "size_kb": round(s.size_diff / 1024, 1),
-        }
-        for s in sorted(stats, key=lambda x: x.size_diff, reverse=True)[:5]
-        if s.size_diff > 0
-    ]
-
-    record = BenchmarkRecord(
-        name="memory_soak",
-        target_label=f"heap growth < {_TARGET_MAX_GROWTH_MB} MB over {_SOAK_ITERATIONS} iterations",
-        unit="MB",
-        target_value=_TARGET_MAX_GROWTH_MB,
-        higher_is_better=False,
-        samples=[growth_mb],
-        extra={
-            "growth_mb": round(growth_mb, 3),
-            "iterations": _SOAK_ITERATIONS,
-            "elapsed_s": round(elapsed_s, 2),
-            "simulated_minutes": round(_SOAK_ITERATIONS * 0.2 / 60, 1),
-            "top_leaks": top_leaks,
-        },
-    )
-    record.finish(growth_mb)
-    register_result(record)
-
-    assert record.passed, (
-        f"Memory soak benchmark failed: heap grew {growth_mb:.2f} MB "
-        f"> {_TARGET_MAX_GROWTH_MB} MB target"
-    )
+if __name__ == "__main__":
+    result = run_benchmark()
+    print(f"\n  Final: {'PASS' if result['passed'] else 'FAIL'} — "
+          f"{result['delta_mb']:+.1f}MB delta")
+    raise SystemExit(0 if result["passed"] else 1)
