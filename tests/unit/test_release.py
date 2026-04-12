@@ -164,7 +164,11 @@ class TestTesseractPathProbe:
         from nexus.infra import health as _h
 
         missing = str(tmp_path / "nonexistent.exe")
-        with patch.dict(os.environ, {"NEXUS_TESSERACT_PATH": missing}), patch("shutil.which", return_value=None) as mock_which:
+        with (
+            patch.dict(os.environ, {"NEXUS_TESSERACT_PATH": missing}),
+            patch("shutil.which", return_value=None) as mock_which,
+            patch.object(_h, "_TESSERACT_DEFAULT_PATH", str(tmp_path / "no-tess.exe")),
+        ):
             result = _h._probe_tesseract_path()
 
         mock_which.assert_called_once_with("tesseract")
@@ -175,7 +179,11 @@ class TestTesseractPathProbe:
         from nexus.infra import health as _h
 
         env_without = {k: v for k, v in os.environ.items() if k != "NEXUS_TESSERACT_PATH"}
-        with patch.dict(os.environ, env_without, clear=True), patch("shutil.which", return_value=None) as mock_which:
+        with (
+            patch.dict(os.environ, env_without, clear=True),
+            patch("shutil.which", return_value=None) as mock_which,
+            patch.object(_h, "_TESSERACT_DEFAULT_PATH", "/no/such/tesseract.exe"),
+        ):
             result = _h._probe_tesseract_path()
 
         mock_which.assert_called_once_with("tesseract")
@@ -197,22 +205,32 @@ class TestTesseractPathProbe:
 
     def test_check_tesseract_binary_fail_when_probe_returns_none(self):
         """HealthChecker._check_tesseract_binary returns 'fail' when no binary found."""
+        from nexus.infra import health as _h
         from nexus.infra.health import HealthChecker
 
         checker = HealthChecker()
         env_without = {k: v for k, v in os.environ.items() if k != "NEXUS_TESSERACT_PATH"}
-        with patch.dict(os.environ, env_without, clear=True), patch("shutil.which", return_value=None):
+        with (
+            patch.dict(os.environ, env_without, clear=True),
+            patch("shutil.which", return_value=None),
+            patch.object(_h, "_TESSERACT_DEFAULT_PATH", "/no/such/tesseract.exe"),
+        ):
             result = checker._check_tesseract_binary()
 
         assert result.status == "fail"
 
     def test_fail_result_fix_hint_mentions_env_var(self):
         """'fail' fix_hint must mention NEXUS_TESSERACT_PATH for packaged-build users."""
+        from nexus.infra import health as _h
         from nexus.infra.health import HealthChecker
 
         checker = HealthChecker()
         env_without = {k: v for k, v in os.environ.items() if k != "NEXUS_TESSERACT_PATH"}
-        with patch.dict(os.environ, env_without, clear=True), patch("shutil.which", return_value=None):
+        with (
+            patch.dict(os.environ, env_without, clear=True),
+            patch("shutil.which", return_value=None),
+            patch.object(_h, "_TESSERACT_DEFAULT_PATH", "/no/such/tesseract.exe"),
+        ):
             result = checker._check_tesseract_binary()
 
         assert "NEXUS_TESSERACT_PATH" in result.fix_hint

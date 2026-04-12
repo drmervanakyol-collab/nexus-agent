@@ -119,6 +119,7 @@ _AnyEvent = _MouseEvent | _KeyEvent
 _SendInputFn = Callable[[list[_AnyEvent]], int]
 _GetDoubleClickTimeFn = Callable[[], int]
 _GetScrollLinesFn = Callable[[], int]
+_GetCursorPosFn = Callable[[], "tuple[int, int] | None"]
 
 # ---------------------------------------------------------------------------
 # ctypes structures (used by the default real implementation only)
@@ -212,6 +213,20 @@ def _default_get_scroll_lines() -> int:
         return 3
 
 
+class _POINT(ctypes.Structure):
+    _fields_ = [("x", ctypes.c_long), ("y", ctypes.c_long)]
+
+
+def _default_get_cursor_pos() -> tuple[int, int] | None:
+    """Return current physical cursor position, or None on failure."""
+    try:
+        pt = _POINT()
+        ctypes.windll.user32.GetCursorPos(ctypes.byref(pt))
+        return (int(pt.x), int(pt.y))
+    except Exception:
+        return None
+
+
 # ---------------------------------------------------------------------------
 # MouseTransport
 # ---------------------------------------------------------------------------
@@ -247,6 +262,7 @@ class MouseTransport:
         _send_input_fn: _SendInputFn | None = None,
         _get_double_click_time_fn: _GetDoubleClickTimeFn | None = None,
         _get_scroll_lines_fn: _GetScrollLinesFn | None = None,
+        _get_cursor_pos_fn: _GetCursorPosFn | None = None,
     ) -> None:
         self._metrics = metrics_provider or ScreenMetricsProvider()
         self._send = _send_input_fn or _default_send_input
@@ -254,6 +270,7 @@ class MouseTransport:
             _get_double_click_time_fn or _default_get_double_click_time
         )
         self._get_scroll_lines = _get_scroll_lines_fn or _default_get_scroll_lines
+        self._get_cursor_pos = _get_cursor_pos_fn or _default_get_cursor_pos
 
     # ------------------------------------------------------------------
     # Public API
@@ -340,12 +357,33 @@ class MouseTransport:
             _MouseEvent(phys_x, phys_y, up_flag | _MOUSEEVENTF_ABSOLUTE),
         ]
         sent = self._send(events)
-        ok = sent == len(events)
+        events_ok = sent == len(events)
+
+        # Verify cursor actually reached the target — detects UIPI-blocked input
+        # where SendInput reports success but events are silently dropped.
+        cursor_ok = True
+        if events_ok:
+            actual = self._get_cursor_pos()
+            if actual is not None:
+                dx = abs(actual[0] - phys_x)
+                dy = abs(actual[1] - phys_y)
+                cursor_ok = dx <= 2 and dy <= 2
+                if not cursor_ok:
+                    _log.warning(
+                        "mouse_click_cursor_mismatch",
+                        expected=(phys_x, phys_y),
+                        actual=actual,
+                        logical=coordinates,
+                    )
+
+        ok = events_ok and cursor_ok
         _log.debug(
             "mouse_click",
             logical=coordinates,
             physical=(phys_x, phys_y),
             button=button,
+            events_ok=events_ok,
+            cursor_ok=cursor_ok,
             ok=ok,
         )
         return ok

@@ -58,7 +58,7 @@ _log = get_logger(__name__)
 # ---------------------------------------------------------------------------
 
 _LOCAL_CONFIDENCE_THRESHOLD: float = 0.50
-_ANTI_LOOP_WINDOW: int = 3      # N identical (type, target) → cloud
+_ANTI_LOOP_WINDOW: int = 2      # N identical (type, target) → cloud
 _HARD_STUCK_WINDOW: int = 5     # N actions same target → hitl
 
 # transport_hint from source_type

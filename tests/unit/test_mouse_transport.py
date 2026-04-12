@@ -72,11 +72,22 @@ def _make_transport(
     scroll_lines: int = 3,
 ) -> tuple[MouseTransport, _Recorder]:
     recorder = _Recorder(return_count=return_count)
+
+    # Cursor stub: reports the last physical position that SendInput moved to.
+    # Reads the final MOVE event from the recorder so it always matches.
+    def _fake_cursor_pos() -> tuple[int, int] | None:
+        for call in reversed(recorder.calls):
+            for ev in reversed(call):
+                if isinstance(ev, _MouseEvent) and (ev.flags & _MOUSEEVENTF_MOVE):
+                    return (ev.phys_x, ev.phys_y)
+        return None  # no events yet → skip cursor check
+
     transport = MouseTransport(
         metrics_provider=_make_metrics(scale=scale),
         _send_input_fn=recorder,
         _get_double_click_time_fn=lambda: dbl_click_time_ms,
         _get_scroll_lines_fn=lambda: scroll_lines,
+        _get_cursor_pos_fn=_fake_cursor_pos,
     )
     return transport, recorder
 

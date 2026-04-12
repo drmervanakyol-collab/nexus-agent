@@ -1,0 +1,56 @@
+{
+  "generated_at": "2026-04-11T22:13:41.679733+00:00",
+  "all_passed": false,
+  "results": [
+    {
+      "name": "capture_fps",
+      "target_label": ">10.0 FPS over 30.0s",
+      "unit": "FPS",
+      "target_value": 10.0,
+      "higher_is_better": true,
+      "measured_value": 5184327.0871,
+      "passed": true,
+      "samples_count": 1,
+      "extra": {
+        "frames_total": 450,
+        "elapsed_s": 0.0001,
+        "simulated_duration_s": 30.0
+      }
+    },
+    {
+      "name": "decision_latency",
+      "target_label": "avg < 200.0 ms over 100 decisions",
+      "unit": "ms",
+      "target_value": 200.0,
+      "higher_is_better": false,
+      "measured_value": 0.1274,
+      "passed": true,
+      "samples_count": 100,
+      "extra": {
+        "avg_ms": 0.127,
+        "p95_ms": 0.213,
+        "min_ms": 0.112,
+        "max_ms": 0.271,
+        "decisions": 100
+      }
+    },
+    {
+      "name": "end_to_end",
+      "target_label": ">80% success rate over 10 runs",
+      "unit": "success_rate",
+      "target_value": 0.8,
+      "higher_is_better": true,
+      "measured_value": 0.0,
+      "passed": false,
+      "samples_count": 1,
+      "extra": {
+        "successes": 0,
+        "total_runs": 10,
+        "success_rate_pct": 0.0,
+        "avg_run_ms": 167.68,
+        "min_run_ms": 133.68,
+        "max_run_ms": 234.47
+      }
+    }
+  ]
+}

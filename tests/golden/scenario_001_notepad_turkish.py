@@ -35,7 +35,7 @@ class TestNotepadTurkishInput:
         # ------------------------------------------------------------------
         # Setup
         # ------------------------------------------------------------------
-        import uiautomation as auto  # type: ignore[import-untyped]
+        auto = pytest.importorskip("uiautomation")
 
         proc = subprocess.Popen(["notepad.exe"])
         time.sleep(1.5)  # allow Notepad window to appear

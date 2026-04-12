@@ -17,32 +17,33 @@ Recommendation thresholds
 
 Factor catalogue (7 factors, weights sum to 1.00)
 --------------------------------------------------
-  overall_confidence   (0.20)
+  overall_confidence   (0.10)
       1 − perception.arbitration.overall_confidence.
       Low perception confidence = high ambiguity.
 
-  action_risk          (0.20)
+  action_risk          (0.15)
       1.0 if the candidate action targets a destructive element; 0.0 otherwise.
 
-  source_disagreement  (0.15)
+  source_disagreement  (0.10)
       min(1.0, conflicts_detected / 3).
       Proxy for UIA vs visual disagreement: arbitration conflict count.
 
-  new_screen_pattern   (0.15)
+  new_screen_pattern   (0.10)
       1.0 when the current screen fingerprint was not seen before; 0.0 otherwise.
 
-  stuck_indicator      (0.15)
+  stuck_indicator      (0.10)
       1.0 when the last three (action_type, target_description) tuples are all
       identical (agent is looping); 0.0 otherwise.
 
-  temporal_instability (0.10)
+  temporal_instability (0.05)
       Continuous score based on StateType:
         LOADING → 1.0, TRANSITIONING → 0.9, ANIMATING → 0.8,
         FROZEN → 0.5, UNKNOWN → 0.3, STABLE → 0.0.
 
-  transport_uncertainty (0.05)
+  transport_uncertainty (0.40)
       1.0 when the most recent transport used a fallback (mouse/keyboard)
       instead of the native (UIA/DOM) channel; 0.0 otherwise.
+      High weight so a single fallback step immediately triggers cloud planning.
 
 Public API
 ----------
@@ -67,13 +68,13 @@ _log = get_logger(__name__)
 # ---------------------------------------------------------------------------
 
 _WEIGHTS: dict[str, float] = {
-    "overall_confidence":   0.20,
-    "action_risk":          0.20,
-    "source_disagreement":  0.15,
-    "new_screen_pattern":   0.15,
-    "stuck_indicator":      0.15,
-    "temporal_instability": 0.10,
-    "transport_uncertainty": 0.05,
+    "overall_confidence":   0.10,
+    "action_risk":          0.15,
+    "source_disagreement":  0.10,
+    "new_screen_pattern":   0.10,
+    "stuck_indicator":      0.10,
+    "temporal_instability": 0.05,
+    "transport_uncertainty": 0.40,
 }
 
 # ---------------------------------------------------------------------------

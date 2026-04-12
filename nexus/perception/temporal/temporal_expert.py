@@ -167,8 +167,20 @@ class ScreenState:
 def _default_ocr(frame: Frame) -> str:
     """Extract text from *frame* via pytesseract; returns '' on any error."""
     try:
+        import shutil
+
         import pytesseract
         from PIL import Image
+
+        # Point pytesseract at the binary using the same priority as
+        # HealthChecker: shutil.which first, then the default Windows path.
+        # Without this, pytesseract falls back to bare "tesseract" which
+        # fails when Tesseract is installed but not on PATH.
+        tess_cmd = (
+            shutil.which("tesseract")
+            or r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+        )
+        pytesseract.pytesseract.tesseract_cmd = tess_cmd
 
         img = Image.fromarray(frame.data, mode="RGB")
         return str(pytesseract.image_to_string(img, lang="eng+tur", config="--psm 11"))

@@ -166,9 +166,15 @@ def _default_run_tesseract(
         pil_img = _PILImage.fromarray(image)
         pil_img.save(tmp_path)
 
+        import shutil
+
+        tess_bin = (
+            shutil.which("tesseract")
+            or r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+        )
         result = subprocess.run(
             [
-                "tesseract",
+                tess_bin,
                 tmp_path,
                 "stdout",
                 "-l",
@@ -178,16 +184,19 @@ def _default_run_tesseract(
                 "tsv",
             ],
             capture_output=True,
-            text=True,
             timeout=timeout_s,
         )
 
         if result.returncode != 0:
+            stderr_text = result.stderr.decode("utf-8", errors="replace")[:200]
             raise subprocess.SubprocessError(
-                f"tesseract exited {result.returncode}: {result.stderr[:200]}"
+                f"tesseract exited {result.returncode}: {stderr_text}"
             )
 
-        return result.stdout
+        # Decode as UTF-8 with replacement — avoids UnicodeDecodeError on
+        # Windows consoles using CP1252/CP1254 when text=True uses the system
+        # default encoding instead of UTF-8.
+        return result.stdout.decode("utf-8", errors="replace")
 
     finally:
         with contextlib.suppress(OSError):
@@ -430,6 +439,8 @@ class TesseractOCREngine:
         but trigger a structured-log WARNING.
         """
         results: list[OCRResult] = []
+        if not tsv:
+            return results
         lines = tsv.strip().splitlines()
         if len(lines) < 2:
             return results

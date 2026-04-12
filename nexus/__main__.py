@@ -190,8 +190,12 @@ def _build_decision_engine(settings: Any, cost_tracker: Any, task_id: str) -> An
     )
 
 
-def _build_transport_resolver(settings: Any, uia_adapter: Any = None) -> Any:
-    """Build TransportResolver with real UIA/OS transports where available."""
+def _build_transport_resolver(
+    settings: Any,
+    uia_adapter: Any = None,
+    dom_adapter: Any = None,
+) -> Any:
+    """Build TransportResolver with real UIA/DOM/OS transports where available."""
     from nexus.source.transport.resolver import TransportResolver
 
     uia_invoker = None
@@ -209,11 +213,34 @@ def _build_transport_resolver(settings: Any, uia_adapter: Any = None) -> Any:
         def uia_selector(element: Any) -> bool:
             return _uia.select(element)  # type: ignore[no-any-return]
 
+    dom_clicker = None
+    dom_typer = None
+    dom_focuser = None
+    dom_clearer = None
+
+    _dom = dom_adapter
+    if _dom is not None:
+        async def dom_clicker(element: Any) -> bool:
+            return await _dom.click(element)  # type: ignore[no-any-return]
+
+        async def dom_typer(element: Any, text: str) -> bool:
+            return await _dom.type_text(element, text)  # type: ignore[no-any-return]
+
+        async def dom_focuser(element: Any) -> bool:
+            return await _dom.focus(element)  # type: ignore[no-any-return]
+
+        async def dom_clearer(element: Any) -> bool:
+            return await _dom.clear(element)  # type: ignore[no-any-return]
+
     return TransportResolver(
         settings,
         _uia_invoker=uia_invoker,
         _uia_value_setter=uia_value_setter,
         _uia_selector=uia_selector,
+        _dom_clicker=dom_clicker,
+        _dom_typer=dom_typer,
+        _dom_focuser=dom_focuser,
+        _dom_clearer=dom_clearer,
     )
 
 
@@ -229,8 +256,32 @@ def _try_create_uia_adapter(settings: Any) -> Any:
     return None
 
 
-def _build_source_fn(settings: Any, uia_adapter: Any) -> Any:
-    """Return an async source function that reuses the given UIAAdapter."""
+def _try_create_dom_adapter(settings: Any) -> Any:
+    """Create a DOMAdapter for browser tasks; return None if CDP unavailable."""
+    try:
+        from nexus.source.dom.adapter import DOMAdapter  # noqa: PLC0415
+        return DOMAdapter(settings)
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _build_file_probe(settings: Any) -> Any:  # noqa: ARG001
+    """Return a sync file probe that extracts PDF/XLSX when ctx has 'file_path'."""
+    from nexus.source.file.adapter import FileAdapter  # noqa: PLC0415
+
+    _file_adapter = FileAdapter()
+
+    def _file_probe(ctx: dict[str, Any]) -> Any:
+        path = ctx.get("file_path")
+        if not path:
+            return None
+        return _file_adapter.extract(path)
+
+    return _file_probe
+
+
+def _build_source_fn(settings: Any, uia_adapter: Any, dom_adapter: Any = None) -> Any:
+    """Return an async source function that reuses the given UIA/DOM adapters."""
     import ctypes
 
     from nexus.source.resolver import SourcePriorityResolver
@@ -246,9 +297,27 @@ def _build_source_fn(settings: Any, uia_adapter: Any) -> Any:
             # the resolver falls through to the visual fallback.
             return elements if elements else None
 
-    async def _source_fn() -> Any:
-        resolver = SourcePriorityResolver(settings, _uia_probe=uia_probe)
-        return resolver.resolve({})
+    file_probe = _build_file_probe(settings)
+
+    async def _source_fn(task_context: dict[str, Any]) -> Any:
+        # DOM probe: fetch elements async before entering the sync resolver.
+        dom_data = None
+        if dom_adapter is not None:
+            try:
+                dom_data = await dom_adapter.get_elements("*")
+            except Exception:  # noqa: BLE001
+                dom_data = None
+
+        def _dom_probe(ctx: dict[str, Any]) -> Any:  # noqa: ARG001
+            return dom_data  # pre-fetched above; None when CDP unavailable
+
+        resolver = SourcePriorityResolver(
+            settings,
+            _uia_probe=uia_probe,
+            _dom_probe=_dom_probe if dom_adapter is not None else None,
+            _file_probe=file_probe,
+        )
+        return resolver.resolve(task_context)
 
     return _source_fn
 
@@ -258,14 +327,14 @@ def _build_source_fn(settings: Any, uia_adapter: Any) -> Any:
 # ---------------------------------------------------------------------------
 
 
-async def _default_source_fn():  # type: ignore[no-untyped-def]
+async def _default_source_fn(task_context: dict[str, Any]) -> Any:
     """Fallback source function (used when no UIA adapter is available)."""
     from nexus.core.settings import NexusSettings
     from nexus.source.resolver import SourcePriorityResolver
 
     settings = NexusSettings()
     resolver = SourcePriorityResolver(settings)
-    return resolver.resolve({})
+    return resolver.resolve(task_context)
 
 
 async def _default_capture_fn():  # type: ignore[no-untyped-def]
@@ -323,12 +392,12 @@ async def _default_perceive_fn(frame, source_result):  # type: ignore[no-untyped
         _hdr = "level\tpage_num\tblock_num\tpar_num\tline_num\tword_num"
         return f"{_hdr}\tleft\ttop\twidth\theight\tconf\ttext\n"
 
-    try:
-        import subprocess
-        subprocess.run(["tesseract", "--version"], capture_output=True, timeout=5)
-        ocr_engine = TesseractOCREngine()
-    except (FileNotFoundError, Exception):
-        ocr_engine = TesseractOCREngine(_run_fn=_null_ocr)
+    # Use the same path-probe logic as HealthChecker so that a Tesseract
+    # installed at the default Windows location (not on PATH) is found.
+    from nexus.infra.health import _probe_tesseract_path  # noqa: PLC0415
+
+    tess_path = _probe_tesseract_path()
+    ocr_engine = TesseractOCREngine() if tess_path else TesseractOCREngine(_run_fn=_null_ocr)
 
     orchestrator = PerceptionOrchestrator(
         temporal_expert=TemporalExpert(),
@@ -465,8 +534,10 @@ async def _run_task(goal: str, args: argparse.Namespace) -> int:
 
     # Single shared UIAAdapter — reused by both source and transport
     uia_adapter = _try_create_uia_adapter(settings)
-    source_fn = _build_source_fn(settings, uia_adapter) if uia_adapter else _default_source_fn
-    transport_resolver = _build_transport_resolver(settings, uia_adapter)
+    # DOMAdapter for browser tasks — None when no Chrome with CDP is running
+    dom_adapter = _try_create_dom_adapter(settings)
+    source_fn = _build_source_fn(settings, uia_adapter, dom_adapter)
+    transport_resolver = _build_transport_resolver(settings, uia_adapter, dom_adapter)
 
     # Optional components — wired when available, None otherwise
     health_checker = _build_health_checker(db_path)
@@ -513,14 +584,25 @@ async def _run_task(goal: str, args: argparse.Namespace) -> int:
     if result.success:
         native_pct = int(result.transport_stats.native_ratio * 100)
         print(
-            f"[nexus] Tamamlandi — {result.duration_ms:.0f} ms, "
+            f"[nexus] Tamamlandi - {result.duration_ms:.0f} ms, "
             f"{result.steps_completed} adim, "
             f"${result.total_cost_usd:.4f}, "
             f"native transport %{native_pct}"
         )
         return 0
 
-    print(f"[nexus] Basarisiz: {result.error}", file=sys.stderr)
+    if result.status == "suspended":
+        print(
+            f"[nexus] Gorev askiya alindi: {result.summary or 'sebep belirtilmedi'}",
+            file=sys.stderr,
+        )
+    elif result.status == "cancelled":
+        print("[nexus] Gorev iptal edildi.", file=sys.stderr)
+    else:
+        print(
+            f"[nexus] Basarisiz: {result.error or result.summary or 'bilinmeyen hata'}",
+            file=sys.stderr,
+        )
     return 1
 
 
@@ -559,8 +641,29 @@ async def _interactive_loop(args: argparse.Namespace) -> int:
 # ---------------------------------------------------------------------------
 
 
+def _set_dpi_aware() -> None:
+    """
+    Set Per-Monitor V2 DPI awareness before any window is created.
+
+    Must be the very first Windows API call in the process — before logging,
+    before COM init, before any UI framework import.  Calling it later risks
+    Windows ignoring the request (return value 0 / ERROR_ACCESS_DENIED).
+    """
+    if sys.platform != "win32":
+        return
+    try:
+        import ctypes
+        # DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 = -4
+        ctypes.windll.user32.SetProcessDpiAwarenessContext(ctypes.c_void_p(-4))
+    except Exception:
+        pass  # non-fatal; fall back to system DPI scaling
+
+
 def main() -> None:
     """Primary entry point — called by ``python -m nexus`` and the EXE stub."""
+    # DPI awareness must be set before any window or COM initialisation.
+    _set_dpi_aware()
+
     parser = _build_arg_parser()
     args = parser.parse_args()
 
@@ -583,10 +686,14 @@ def main() -> None:
         sys.exit(2)
 
     # Run
-    if args.task:
-        exit_code = asyncio.run(_run_task(args.task, args))
-    else:
-        exit_code = asyncio.run(_interactive_loop(args))
+    try:
+        if args.task:
+            exit_code = asyncio.run(_run_task(args.task, args))
+        else:
+            exit_code = asyncio.run(_interactive_loop(args))
+    except KeyboardInterrupt:
+        print("\n[nexus] Interrupted.", file=sys.stderr)
+        sys.exit(130)
 
     sys.exit(exit_code)
 

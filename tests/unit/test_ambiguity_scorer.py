@@ -147,13 +147,13 @@ class TestWeights:
             assert w > 0.0, f"Weight for {name!r} must be positive"
 
     def test_expected_weights(self) -> None:
-        assert _WEIGHTS["overall_confidence"] == pytest.approx(0.20)
-        assert _WEIGHTS["action_risk"] == pytest.approx(0.20)
-        assert _WEIGHTS["source_disagreement"] == pytest.approx(0.15)
-        assert _WEIGHTS["new_screen_pattern"] == pytest.approx(0.15)
-        assert _WEIGHTS["stuck_indicator"] == pytest.approx(0.15)
-        assert _WEIGHTS["temporal_instability"] == pytest.approx(0.10)
-        assert _WEIGHTS["transport_uncertainty"] == pytest.approx(0.05)
+        assert _WEIGHTS["overall_confidence"] == pytest.approx(0.10)
+        assert _WEIGHTS["action_risk"] == pytest.approx(0.15)
+        assert _WEIGHTS["source_disagreement"] == pytest.approx(0.10)
+        assert _WEIGHTS["new_screen_pattern"] == pytest.approx(0.10)
+        assert _WEIGHTS["stuck_indicator"] == pytest.approx(0.10)
+        assert _WEIGHTS["temporal_instability"] == pytest.approx(0.05)
+        assert _WEIGHTS["transport_uncertainty"] == pytest.approx(0.40)
 
 
 # ---------------------------------------------------------------------------
@@ -175,7 +175,7 @@ class TestComputeWeightedScore:
         factors = dict.fromkeys(_WEIGHTS, 0.0)
         factors["action_risk"] = 1.0
         score = _compute_weighted_score(factors, _WEIGHTS)
-        assert score == pytest.approx(0.20)
+        assert score == pytest.approx(0.15)
 
     def test_clamp_prevents_above_one(self) -> None:
         # Even if factors somehow exceed 1.0, output is clamped
@@ -389,29 +389,31 @@ class TestRecommendationDecisions:
         assert result.recommendation == "local"
 
     def test_destructive_action_raises_to_cloud(self) -> None:
-        """Destructive + low confidence + new screen → score ≥ 0.40 (cloud)."""
-        # action_risk: 1.0 × 0.20 = 0.20
-        # overall_confidence: (1-0.3) × 0.20 = 0.14
-        # new_screen_pattern: 1.0 × 0.15 = 0.15
-        # source_disagreement: (1/3) × 0.15 ≈ 0.05
-        # total ≈ 0.54 → cloud
+        """Destructive + fallback transport + low confidence + new screen → cloud."""
+        # transport_uncertainty: 1.0 × 0.40 = 0.40  ← dominant; alone hits threshold
+        # action_risk: 1.0 × 0.15 = 0.15
+        # overall_confidence: (1-0.3) × 0.10 = 0.07
+        # new_screen_pattern: 1.0 × 0.10 = 0.10
+        # source_disagreement: (1/3) × 0.10 ≈ 0.033
+        # total ≈ 0.753 → suspend
         result = _score(
             perception=_make_perception(
                 overall_confidence=0.3, conflicts_detected=1, state="STABLE"
             ),
             candidate_is_destructive=True,
             screen_previously_seen=False,
-            used_fallback_transport=False,
+            used_fallback_transport=True,
         )
         assert result.recommendation in ("cloud", "suspend")
 
     def test_stuck_agent_raises_recommendation(self) -> None:
-        """Stuck + low-confidence + new screen + conflict → score ≥ 0.40 (cloud)."""
-        # stuck: 1.0 × 0.15 = 0.15
-        # overall_confidence: (1-0.3) × 0.20 = 0.14
-        # new_screen_pattern: 1.0 × 0.15 = 0.15
-        # source_disagreement: (1/3) × 0.15 ≈ 0.05
-        # total ≈ 0.49 → cloud
+        """Stuck + fallback transport + low-confidence + new screen → cloud/suspend."""
+        # transport_uncertainty: 1.0 × 0.40 = 0.40  ← primary escalation signal
+        # stuck: 1.0 × 0.10 = 0.10
+        # overall_confidence: (1-0.3) × 0.10 = 0.07
+        # new_screen_pattern: 1.0 × 0.10 = 0.10
+        # source_disagreement: (1/3) × 0.10 ≈ 0.033
+        # total ≈ 0.703 → suspend
         stuck = [_make_action("click", "Btn") for _ in range(3)]
         result = _score(
             perception=_make_perception(
@@ -419,6 +421,7 @@ class TestRecommendationDecisions:
             ),
             action_history=stuck,
             screen_previously_seen=False,
+            used_fallback_transport=True,
         )
         assert result.recommendation in ("cloud", "suspend")
 

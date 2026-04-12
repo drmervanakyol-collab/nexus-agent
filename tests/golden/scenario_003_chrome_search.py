@@ -36,7 +36,7 @@ class TestChromeSearch:
         # ------------------------------------------------------------------
         # Setup
         # ------------------------------------------------------------------
-        import uiautomation as auto  # type: ignore[import-untyped]
+        auto = pytest.importorskip("uiautomation")
 
         proc = subprocess.Popen(
             ["chrome.exe", "--new-window", _URL],

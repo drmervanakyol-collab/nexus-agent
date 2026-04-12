@@ -40,7 +40,7 @@ class TestFileExplorer:
         # ------------------------------------------------------------------
         # Setup
         # ------------------------------------------------------------------
-        import uiautomation as auto  # type: ignore[import-untyped]
+        auto = pytest.importorskip("uiautomation")
 
         work_dir = str(tmp_path)
         proc = subprocess.Popen(["explorer.exe", work_dir])

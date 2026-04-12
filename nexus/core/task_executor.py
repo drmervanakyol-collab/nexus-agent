@@ -158,7 +158,7 @@ def _resolve_uia_target(source_result: SourceResult, target: Any) -> Any:
 
 TaskStatus = Literal["running", "completed", "failed", "suspended", "cancelled"]
 
-SourceFn = Callable[[], Awaitable[SourceResult]]
+SourceFn = Callable[[dict[str, Any]], Awaitable[SourceResult]]
 CaptureFn = Callable[[], Awaitable[Frame]]
 PerceiveFn = Callable[[Frame, SourceResult], Awaitable[PerceptionResult]]
 DoneFn = Callable[[Decision], bool]
@@ -166,7 +166,7 @@ VerifierFn = Callable[[Frame, Frame, str], Awaitable[VerificationResult]]
 ProgressFn = Callable[[str], None]
 
 # Action types that should not trigger verification
-_SKIP_VERIFY_ACTIONS: frozenset[str] = frozenset({"done", "complete", "finish"})
+_SKIP_VERIFY_ACTIONS: frozenset[str] = frozenset({"done", "complete", "finish", "none"})
 
 # Action types (and task_status values) that signal task completion
 _DONE_ACTION_TYPES: frozenset[str] = frozenset({"done", "complete", "finish"})
@@ -256,7 +256,7 @@ class TaskExecutor:
     settings:
         NexusSettings — drives policy, budget, and verification config.
     source_fn:
-        Async callable ``() -> SourceResult``.
+        Async callable ``(task_context: dict) -> SourceResult``.
     capture_fn:
         Async callable ``() -> Frame``.
     perceive_fn:
@@ -374,6 +374,7 @@ class TaskExecutor:
         error: str | None = None
         last_decision: Decision | None = None
         before_frame: Frame | None = None
+        _last_transport_fallback: bool = False
 
         try:
             while not self._cancelled and ctx.action_count < self._max_steps:
@@ -389,8 +390,11 @@ class TaskExecutor:
                 step = ctx.action_count + 1
                 self._progress(ctx, f"Step {step}: resolving source")
 
-                # 2. Resolve source
-                source_result: SourceResult = await self._source_fn()
+                # 2. Resolve source — pass task context so file/DOM probes can
+                # use goal and task_id to locate the right source.
+                source_result: SourceResult = await self._source_fn(
+                    {"goal": goal, "task_id": task_id}
+                )
 
                 # 3. Capture frame
                 self._progress(ctx, f"Step {step}: capturing frame")
@@ -409,11 +413,10 @@ class TaskExecutor:
                     break
 
                 # Determine if the last transport used a fallback channel
-                _last_transport = ctx.action_history[-1] if ctx.action_history else None
                 _used_fallback = (
-                    _last_transport is not None
-                    and getattr(_last_transport, "outcome", None) == "fallback"
-                ) or (source_result.source_type == "visual")
+                    _last_transport_fallback
+                    or source_result.source_type == "visual"
+                )
 
                 # UIA/DOM sources give reliable structured data — treat screen as
                 # "previously seen" to avoid inflating the ambiguity score with
@@ -468,8 +471,8 @@ class TaskExecutor:
                             task_id, decision.reasoning, {"step": step}
                         )
                     ctx.status = "suspended"
-                    self._progress(  # noqa: E501
-                        ctx, f"Step {step}: task suspended — {decision.reasoning}"
+                    self._progress(
+                        ctx, f"Step {step}: task suspended - {decision.reasoning}"
                     )
                     break
 
@@ -534,6 +537,7 @@ class TaskExecutor:
                             task_id, transport_result.method_used
                         )
 
+                    _last_transport_fallback = transport_result.fallback_used
                     transport_label = (
                         f"{transport_result.method_used}"
                         f"{'(fallback)' if transport_result.fallback_used else ''}"
@@ -737,7 +741,7 @@ class TaskExecutor:
 # ---------------------------------------------------------------------------
 
 
-async def _default_source_fn() -> SourceResult:
+async def _default_source_fn(task_context: dict[str, Any]) -> SourceResult:  # noqa: ARG001
     """Fall-back: visual source (always available)."""
     return SourceResult(
         source_type="visual",
@@ -794,11 +798,17 @@ async def _default_perceive_fn(frame: Frame, source: SourceResult) -> Perception
 
 
 def _default_done_fn(decision: Decision) -> bool:
-    """Consider the task done when action_type is a completion verb or task_status is complete."""
+    """Consider the task done when action_type is a completion verb, task_status is complete,
+    or the cloud planner returns 'none' (nothing left to do)."""
     if decision.action_type in _DONE_ACTION_TYPES:
         return True
     task_status = getattr(decision, "task_status", "in_progress")
-    return task_status == "complete"
+    if task_status == "complete":
+        return True
+    # Safety-net: cloud planner returning "none" means it has no further actions.
+    if decision.action_type == "none" and getattr(decision, "source", "") == "cloud":
+        return True
+    return False
 
 
 # ---------------------------------------------------------------------------

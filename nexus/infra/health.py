@@ -157,11 +157,53 @@ def _probe_ram_bytes() -> int:
 
 
 def _probe_dpi_awareness() -> int | None:
-    """Return DPI awareness level (0=unaware, 1=sys, 2=per-monitor) or None."""
+    """
+    Return DPI awareness level or None if undetectable.
+
+    Return values
+    -------------
+    0  — Unaware (Windows scales coordinates)
+    1  — System DPI aware
+    2  — Per-Monitor aware (V1 or V2)
+
+    Tries the newer ``GetDpiAwarenessContextForProcess`` first (Windows 10
+    1607+) which correctly maps Per-Monitor V2 context.  Falls back to the
+    older ``GetProcessDpiAwareness`` (shcore) for pre-1607 systems.
+    """
     if sys.platform != "win32":
         return None
     import ctypes  # noqa: PLC0415
 
+    # DPI_AWARENESS_CONTEXT values (handle-like; compare with IsValidDpiAwarenessContext)
+    ctx_unaware: int = -1
+    ctx_system: int = -2
+    ctx_per_monitor: int = -3
+    ctx_per_monitor_v2: int = -4
+
+    # Map context handle → awareness integer level (2 = per-monitor, any variant)
+    ctx_to_level: dict[int, int] = {
+        ctx_unaware: 0,
+        ctx_system: 1,
+        ctx_per_monitor: 2,
+        ctx_per_monitor_v2: 2,
+    }
+
+    try:
+        user32 = ctypes.windll.user32
+        # GetDpiAwarenessContextForProcess(hProcess=0 → current process)
+        ctx = user32.GetDpiAwarenessContextForProcess(ctypes.c_void_p(0))
+        if ctx:
+            for sentinel, level in ctx_to_level.items():
+                ref = ctypes.c_void_p(sentinel)
+                if user32.AreDpiAwarenessContextsEqual(
+                    ctypes.c_void_p(ctx), ref
+                ):
+                    return level
+            return 2  # unknown context but non-null → assume per-monitor
+    except (OSError, AttributeError):
+        pass
+
+    # Fallback: older shcore API (does not distinguish V1/V2)
     try:
         awareness = ctypes.c_int(-1)
         ret = ctypes.windll.shcore.GetProcessDpiAwareness(
@@ -172,6 +214,10 @@ def _probe_dpi_awareness() -> int | None:
         return None
 
 
+# Default Windows Tesseract installation path — module-level so tests can patch it.
+_TESSERACT_DEFAULT_PATH: str = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+
+
 def _probe_tesseract_path() -> str | None:
     """
     Locate the Tesseract binary using the following priority:
@@ -180,19 +226,29 @@ def _probe_tesseract_path() -> str | None:
        build to point at the embedded binary inside the PyInstaller bundle.
     2. ``shutil.which("tesseract")`` — standard PATH search for development
        and system-installed Tesseract.
+    3. ``_TESSERACT_DEFAULT_PATH`` — default Windows installer location.
     """
     import os
+    from pathlib import Path
 
     explicit = os.environ.get("NEXUS_TESSERACT_PATH", "").strip()
     if explicit:
-        from pathlib import Path
-
         p = Path(explicit)
         if p.is_file():
             return str(p)
         # env var set but file missing — fall through to PATH search so the
         # health check failure message is meaningful
-    return shutil.which("tesseract")
+
+    found = shutil.which("tesseract")
+    if found:
+        return found
+
+    # Fallback: default Windows installer path (patchable in tests)
+    default = Path(_TESSERACT_DEFAULT_PATH)
+    if default.is_file():
+        return str(default)
+
+    return None
 
 
 def _probe_dxcam_importable() -> bool:

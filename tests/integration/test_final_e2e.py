@@ -240,7 +240,7 @@ async def _make_executor(
     engine = _make_engine(decisions)
     element = _element_stub()
 
-    async def source_fn() -> SourceResult:
+    async def source_fn(_ctx: dict) -> SourceResult:
         return _uia_source() if not force_mouse else _visual_source()
 
     async def capture_fn() -> Frame:
@@ -675,7 +675,7 @@ class TestFullSuspendResume:
         db = Database(":memory:")
         step_counter = [0]
 
-        async def source_fn() -> SourceResult:
+        async def source_fn(_ctx: dict) -> SourceResult:
             return _uia_source()
 
         async def capture_fn() -> Frame:
@@ -923,7 +923,7 @@ class TestGercekUrunDegeri:
             verify_results.append(v)
             return v
 
-        async def source_fn() -> SourceResult:
+        async def source_fn(_ctx: dict) -> SourceResult:
             return _uia_source()
 
         async def capture_fn() -> Frame:
@@ -1000,7 +1000,7 @@ class TestGercekUrunDegeri:
         db = Database(":memory:")
         await db.init()
 
-        async def source_fn() -> SourceResult:
+        async def source_fn(_ctx: dict) -> SourceResult:
             return _uia_source()
 
         async def capture_fn() -> Frame:

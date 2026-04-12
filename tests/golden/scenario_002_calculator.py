@@ -35,7 +35,7 @@ class TestCalculator:
         # ------------------------------------------------------------------
         # Setup
         # ------------------------------------------------------------------
-        import uiautomation as auto  # type: ignore[import-untyped]
+        auto = pytest.importorskip("uiautomation")
 
         proc = subprocess.Popen(["calc.exe"])
         time.sleep(1.5)

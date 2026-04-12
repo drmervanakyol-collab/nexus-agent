@@ -39,7 +39,7 @@ class TestTransportNative:
         # ------------------------------------------------------------------
         # Setup
         # ------------------------------------------------------------------
-        import uiautomation as auto  # type: ignore[import-untyped]
+        auto = pytest.importorskip("uiautomation")
 
         from nexus.core.task_executor import TransportStats
 

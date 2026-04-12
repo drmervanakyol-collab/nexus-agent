@@ -487,20 +487,20 @@ class TestAntiLoop:
         await engine.decide(_GOAL_SUBMIT, perception, history, _make_context())
         assert provider.call_count == 1
 
-    async def test_two_identical_no_anti_loop(self) -> None:
-        """Only 2 identical records — no anti-loop → local path."""
+    async def test_one_identical_no_anti_loop(self) -> None:
+        """Only 1 identical record — below anti-loop window (2) → local path."""
         frame = _frame_with_button()
         ocr = _ConstOCR([_ocr_result("Submit", cx=100, cy=95)])
         orch = _make_perception_orchestrator(ocr)
         perception = await _perceive(orch, frame)
 
-        history = [_make_action_record("click", "Submit") for _ in range(2)]
+        history = [_make_action_record("click", "Submit") for _ in range(1)]
         provider = _StubProvider()
         planner, tracker = _make_planner(provider)
         engine = _make_engine(planner, tracker)
 
         result = await engine.decide(_GOAL_SUBMIT, perception, history, _make_context())
-        # With 2 identical records and a visible button, should stay local
+        # With 1 identical record and a visible button, should stay local
         assert result.source == "local"
         assert provider.call_count == 0
 

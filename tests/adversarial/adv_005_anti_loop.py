@@ -1,14 +1,14 @@
 """
 tests/adversarial/adv_005_anti_loop.py
-Adversarial Test 005 — Anti-loop: 3 identical actions → cloud escalation flag
+Adversarial Test 005 — Anti-loop: 2 identical actions → cloud escalation flag
 
 Scenario:
-  The decision history contains _ANTI_LOOP_WINDOW (3) identical
+  The decision history contains _ANTI_LOOP_WINDOW (2) identical
   (action_type, target_description) records.
 
 Success criteria:
-  - _is_anti_loop(history) returns True.
-  - With 2 identical records: _is_anti_loop returns False (below threshold).
+  - _is_anti_loop(history) returns True with 2 identical records.
+  - With 1 identical record: _is_anti_loop returns False (below threshold).
   - Mixed records: _is_anti_loop returns False.
 
 Tests exercise the internal helper directly (white-box) because the loop
@@ -42,23 +42,21 @@ def _rec(action_type: str, target: str) -> ActionRecord:
 
 @pytest.mark.adversarial
 class TestAntiLoop:
-    """ADV-005: Anti-loop detection triggers cloud escalation after 3 identical actions."""
+    """ADV-005: Anti-loop detection triggers cloud escalation after 2 identical actions."""
 
-    def test_three_identical_records_triggers_loop(self):
-        """3 identical (type, target) → _is_anti_loop returns True."""
+    def test_two_identical_records_triggers_loop(self):
+        """2 identical (type, target) → _is_anti_loop returns True."""
         history = [
-            _rec("click", "Kaydet butonu"),
             _rec("click", "Kaydet butonu"),
             _rec("click", "Kaydet butonu"),
         ]
         assert _is_anti_loop(history) is True, (
-            "3 identical actions must trigger anti-loop detection"
+            "2 identical actions must trigger anti-loop detection"
         )
 
-    def test_two_identical_below_threshold(self):
-        """2 identical records → below _ANTI_LOOP_WINDOW (3) → False."""
+    def test_one_identical_below_threshold(self):
+        """1 identical record → below _ANTI_LOOP_WINDOW (2) → False."""
         history = [
-            _rec("click", "Kaydet butonu"),
             _rec("click", "Kaydet butonu"),
         ]
         assert _is_anti_loop(history) is False
@@ -92,13 +90,12 @@ class TestAntiLoop:
 
     def test_loop_in_tail_triggers(self):
         """
-        History has diverse start but last 3 are identical →
+        History has diverse start but last 2 are identical →
         loop is detected in the tail.
         """
         history = [
             _rec("type", "İsim alanı"),
             _rec("scroll", "Liste"),
-            _rec("click", "Kaydet butonu"),
             _rec("click", "Kaydet butonu"),
             _rec("click", "Kaydet butonu"),
         ]

@@ -62,8 +62,21 @@ def _status_colour(status: str) -> str:
     }.get(status, _ANSI_WHITE)
 
 
+def _safe_char(unicode_char: str, ascii_fallback: str) -> str:
+    """Return *unicode_char* if the console can encode it, else *ascii_fallback*."""
+    try:
+        unicode_char.encode(sys.stdout.encoding or "ascii")
+        return unicode_char
+    except (UnicodeEncodeError, LookupError):
+        return ascii_fallback
+
+
 def _status_badge(status: str) -> str:
-    symbols = {"ok": "✔", "warn": "⚠", "fail": "✘"}
+    symbols = {
+        "ok": _safe_char("✔", "v"),
+        "warn": _safe_char("⚠", "!"),
+        "fail": _safe_char("✘", "x"),
+    }
     sym = symbols.get(status, "?")
     return _colour(f"[{sym}]", _status_colour(status))
 
@@ -80,19 +93,11 @@ def _render_check(result: CheckResult) -> None:
     print(f"       {result.message}")
     if result.fix_hint and result.status != "ok":
         hint_lines = result.fix_hint.splitlines()
+        arrow = _safe_char("↳", "->")
         for i, line in enumerate(hint_lines):
-            prefix = "  ↳  " if i == 0 else "     "
+            prefix = f"  {arrow}  " if i == 0 else "      "
             print(_colour(f"{prefix}{line}", _ANSI_YELLOW))
     print()
-
-
-def _safe_char(unicode_char: str, ascii_fallback: str) -> str:
-    """Return *unicode_char* if the console can encode it, else *ascii_fallback*."""
-    try:
-        unicode_char.encode(sys.stdout.encoding or "ascii")
-        return unicode_char
-    except (UnicodeEncodeError, LookupError):
-        return ascii_fallback
 
 
 def _render_report(report: HealthReport) -> None:

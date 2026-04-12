@@ -77,8 +77,10 @@ _SYSTEM_PROMPT: str = (
     "4. Never perform destructive actions (Sil, Delete, Remove)"
     " unless confidence >= 0.90.\n"
     "5. Set task_status to \"need_help\" when you are uncertain or blocked.\n"
-    "6. Allowed action_type values:"
-    " click, type, scroll, press_key, wait, none.\n\n"
+    "6. When the goal is fully accomplished, set action_type to \"done\""
+    " and task_status to \"complete\".\n"
+    "7. Allowed action_type values:"
+    " click, type, scroll, press_key, wait, done, none.\n\n"
     "Required JSON format (respond with this object and nothing else):\n"
     "{\n"
     '  "action_type": "click",\n'
