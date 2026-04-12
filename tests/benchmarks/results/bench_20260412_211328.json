@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-12T21:23:57.944394+00:00",
+  "generated_at": "2026-04-12T21:13:28.012371+00:00",
   "all_passed": true,
   "results": [
     {
@@ -15,26 +15,26 @@
         "successes": 10,
         "total_runs": 10,
         "success_rate_pct": 100.0,
-        "avg_run_ms": 30.99,
-        "min_run_ms": 28.63,
-        "max_run_ms": 33.56
+        "avg_run_ms": 31.68,
+        "min_run_ms": 28.98,
+        "max_run_ms": 35.78
       }
     },
     {
       "name": "transport_latency_comparison",
       "target_label": "UIA avg < mouse avg (native advantage)",
       "unit": "ms",
-      "target_value": 0.2510340011212975,
+      "target_value": 0.25943299871869385,
       "higher_is_better": false,
-      "measured_value": 0.1101,
+      "measured_value": 0.1068,
       "passed": true,
       "samples_count": 100,
       "extra": {
-        "uia_avg_ms": 0.1101,
-        "mouse_avg_ms": 0.251,
-        "uia_p95_ms": 0.147,
-        "mouse_p95_ms": 0.3204,
-        "speedup_ratio": 2.28,
+        "uia_avg_ms": 0.1068,
+        "mouse_avg_ms": 0.2594,
+        "uia_p95_ms": 0.1128,
+        "mouse_p95_ms": 0.3392,
+        "speedup_ratio": 2.43,
         "iterations": 100
       }
     }
