@@ -966,3 +966,502 @@ class TestCloudProviderProtocol:
         secondary = AnthropicProvider(api_key=_ANT_KEY)
         fallback = FallbackProvider(primary=primary, secondary=secondary)  # type: ignore[arg-type]
         assert isinstance(fallback, CloudProvider)
+
+
+# ---------------------------------------------------------------------------
+# §13 — Mutation-targeted tests (survived mutant elimination)
+# ---------------------------------------------------------------------------
+
+
+class TestOpenAILatencyPrecision:
+    """Kills L219: * 1000 → *999 / //1000 / /1000 / +1000 / *1001 etc."""
+
+    @pytest.mark.asyncio
+    async def test_latency_ms_equals_elapsed_times_1000(self):
+        # t0=0.0, t1=0.050 → delta=0.050 s → expected 50.0 ms
+        # Tight abs=0.01 kills *999 (49.95) and *1001 (50.05) mutations
+        provider = _oai_provider(_time_fn=_fixed_clock(0.0, 0.050))
+        with respx.mock:
+            respx.post(_OAI_URL).mock(
+                return_value=httpx.Response(200, json=_oai_body("ok"))
+            )
+            result = await provider.complete(
+                [CloudMessage(role="user", content="hi")], model=_OAI_MODEL
+            )
+        assert result.latency_ms == pytest.approx(50.0, abs=0.01)
+
+    @pytest.mark.asyncio
+    async def test_latency_ms_is_not_raw_seconds(self):
+        """Kills //1000 and /1000 mutations: 0.050//1000=0, 0.050/1000=0.00005."""
+        provider = _oai_provider(_time_fn=_fixed_clock(0.0, 0.050))
+        with respx.mock:
+            respx.post(_OAI_URL).mock(
+                return_value=httpx.Response(200, json=_oai_body("ok"))
+            )
+            result = await provider.complete(
+                [CloudMessage(role="user", content="hi")], model=_OAI_MODEL
+            )
+        assert result.latency_ms > 1.0  # must be milliseconds, not seconds
+
+
+class TestAnthropicLatencyPrecision:
+    """Kills L337: same latency mutations for AnthropicProvider."""
+
+    @pytest.mark.asyncio
+    async def test_latency_ms_equals_elapsed_times_1000(self):
+        provider = _ant_provider(_time_fn=_fixed_clock(0.0, 0.050))
+        with respx.mock:
+            respx.post(_ANT_URL).mock(
+                return_value=httpx.Response(200, json=_ant_body("ok"))
+            )
+            result = await provider.complete(
+                [CloudMessage(role="user", content="hi")], model=_ANT_MODEL
+            )
+        assert result.latency_ms == pytest.approx(50.0, abs=0.01)
+
+    @pytest.mark.asyncio
+    async def test_latency_ms_is_not_raw_seconds(self):
+        provider = _ant_provider(_time_fn=_fixed_clock(0.0, 0.050))
+        with respx.mock:
+            respx.post(_ANT_URL).mock(
+                return_value=httpx.Response(200, json=_ant_body("ok"))
+            )
+            result = await provider.complete(
+                [CloudMessage(role="user", content="hi")], model=_ANT_MODEL
+            )
+        assert result.latency_ms > 1.0
+
+
+class TestAnthropicSystemPartsFirstUsed:
+    """Kills L317: system_parts[0] → system_parts[-1] mutation."""
+
+    @pytest.mark.asyncio
+    async def test_first_system_message_used_not_last(self):
+        """With 2 system messages, FIRST is forwarded to system= param."""
+        captured: list[Any] = []
+
+        def capture(request: httpx.Request) -> httpx.Response:
+            captured.append(json.loads(request.content))
+            return httpx.Response(200, json=_ant_body("ok"))
+
+        with respx.mock:
+            respx.post(_ANT_URL).mock(side_effect=capture)
+            provider = _ant_provider()
+            await provider.complete(
+                [
+                    CloudMessage(role="system", content="Be concise"),
+                    CloudMessage(role="system", content="Be verbose"),
+                    CloudMessage(role="user", content="hello"),
+                ],
+                model=_ANT_MODEL,
+            )
+
+        assert captured[0]["system"] == "Be concise"  # first, not "Be verbose"
+
+
+class TestOpenAIFirstChoiceUsed:
+    """Kills L220: response.choices[0] → response.choices[-1] mutation."""
+
+    @pytest.mark.asyncio
+    async def test_first_choice_content_used_not_last(self):
+        body = _oai_body("first choice content")
+        body["choices"].append({
+            "finish_reason": "stop",
+            "index": 1,
+            "message": {"content": "second choice content", "role": "assistant"},
+            "logprobs": None,
+        })
+        with respx.mock:
+            respx.post(_OAI_URL).mock(return_value=httpx.Response(200, json=body))
+            provider = _oai_provider()
+            result = await provider.complete(
+                [CloudMessage(role="user", content="hi")], model=_OAI_MODEL
+            )
+        assert result.content == "first choice content"
+
+
+class TestDefaultMaxRetries:
+    """Kills L54: _DEFAULT_MAX_RETRIES = 3 → 4 mutation."""
+
+    def test_default_max_retries_constant_is_three(self):
+        from nexus.cloud.providers import _DEFAULT_MAX_RETRIES
+        assert _DEFAULT_MAX_RETRIES == 3
+
+    def test_openai_provider_uses_default_max_retries(self):
+        provider = OpenAIProvider(api_key=_OAI_KEY)
+        assert provider._max_retries == 3
+
+    def test_anthropic_provider_uses_default_max_retries(self):
+        provider = AnthropicProvider(api_key=_ANT_KEY)
+        assert provider._max_retries == 3
+
+
+class TestDefaultMaxTokensInRequestBody:
+    """Kills L118/L279: max_tokens=1024 → 1023/1025 mutations."""
+
+    @pytest.mark.asyncio
+    async def test_openai_default_max_tokens_sent_in_body(self):
+        captured: list[Any] = []
+
+        def capture(request: httpx.Request) -> httpx.Response:
+            captured.append(json.loads(request.content))
+            return httpx.Response(200, json=_oai_body("ok"))
+
+        with respx.mock:
+            respx.post(_OAI_URL).mock(side_effect=capture)
+            provider = _oai_provider()
+            # Call without specifying max_tokens → uses default 1024
+            await provider.complete(
+                [CloudMessage(role="user", content="hi")], model=_OAI_MODEL
+            )
+
+        assert captured[0]["max_tokens"] == 1024
+
+    @pytest.mark.asyncio
+    async def test_anthropic_default_max_tokens_sent_in_body(self):
+        captured: list[Any] = []
+
+        def capture(request: httpx.Request) -> httpx.Response:
+            captured.append(json.loads(request.content))
+            return httpx.Response(200, json=_ant_body("ok"))
+
+        with respx.mock:
+            respx.post(_ANT_URL).mock(side_effect=capture)
+            provider = _ant_provider()
+            await provider.complete(
+                [CloudMessage(role="user", content="hi")], model=_ANT_MODEL
+            )
+
+        assert captured[0]["max_tokens"] == 1024
+
+
+class TestAnthropicRoleFiltering:
+    """Kills L311/L313: role != 'system' / role == 'system' operator mutations."""
+
+    @pytest.mark.asyncio
+    async def test_assistant_message_included_in_ant_messages(self):
+        """Kills L311 > 'system' mutation: 'assistant' < 'system' → would be excluded."""
+        captured: list[Any] = []
+
+        def capture(request: httpx.Request) -> httpx.Response:
+            captured.append(json.loads(request.content))
+            return httpx.Response(200, json=_ant_body("ok"))
+
+        with respx.mock:
+            respx.post(_ANT_URL).mock(side_effect=capture)
+            provider = _ant_provider()
+            await provider.complete(
+                [
+                    CloudMessage(role="system", content="system prompt"),
+                    CloudMessage(role="user", content="hello"),
+                    CloudMessage(role="assistant", content="Hi there"),
+                    CloudMessage(role="user", content="continue"),
+                ],
+                model=_ANT_MODEL,
+            )
+
+        roles = [m["role"] for m in captured[0]["messages"]]
+        assert "assistant" in roles
+        assert "system" not in roles
+
+    @pytest.mark.asyncio
+    async def test_assistant_message_not_used_as_system_param(self):
+        """Kills L313 <= 'system' mutation: 'assistant' <= 'system' → True → included in system."""
+        captured: list[Any] = []
+
+        def capture(request: httpx.Request) -> httpx.Response:
+            captured.append(json.loads(request.content))
+            return httpx.Response(200, json=_ant_body("ok"))
+
+        with respx.mock:
+            respx.post(_ANT_URL).mock(side_effect=capture)
+            provider = _ant_provider()
+            await provider.complete(
+                [
+                    CloudMessage(role="system", content="real system"),
+                    CloudMessage(role="assistant", content="not system"),
+                    CloudMessage(role="user", content="hello"),
+                ],
+                model=_ANT_MODEL,
+            )
+
+        # Only the actual system message should be in body["system"]
+        assert captured[0].get("system") == "real system"
+
+
+class TestLatencyNonZeroT0:
+    """Kills Sub→Add latency mutation: (time - t0) → (time + t0) * 1000.
+
+    With t0=0, time-t0 == time+t0. Use non-zero t0 to differentiate.
+    """
+
+    @pytest.mark.asyncio
+    async def test_openai_latency_uses_subtraction_not_addition(self):
+        # t0=10.0, t1=10.100 → delta=0.100 s → expected 100.0 ms
+        # Sub→Add mutation: (10.100 + 10.0) * 1000 = 20100 ≠ 100.0
+        provider = _oai_provider(_time_fn=_fixed_clock(10.0, 10.100))
+        with respx.mock:
+            respx.post(_OAI_URL).mock(
+                return_value=httpx.Response(200, json=_oai_body("ok"))
+            )
+            result = await provider.complete(
+                [CloudMessage(role="user", content="hi")], model=_OAI_MODEL
+            )
+        assert result.latency_ms == pytest.approx(100.0, abs=0.01)
+
+    @pytest.mark.asyncio
+    async def test_anthropic_latency_uses_subtraction_not_addition(self):
+        provider = _ant_provider(_time_fn=_fixed_clock(10.0, 10.100))
+        with respx.mock:
+            respx.post(_ANT_URL).mock(
+                return_value=httpx.Response(200, json=_ant_body("ok"))
+            )
+            result = await provider.complete(
+                [CloudMessage(role="user", content="hi")], model=_ANT_MODEL
+            )
+        assert result.latency_ms == pytest.approx(100.0, abs=0.01)
+
+
+class TestLatencyRoundPrecision:
+    """Kills round(latency_ms, 2) and round(latency_ms, 4) mutations.
+
+    Use a latency whose 3rd decimal is non-zero and differs when rounded to 2 vs 3.
+    0.1234567 s → 123.4567 ms → round(,3) = 123.457, round(,2) = 123.46, round(,4) = 123.4567.
+    """
+
+    @pytest.mark.asyncio
+    async def test_openai_latency_rounded_to_3_decimal_places(self):
+        # 0.1234567 * 1000 = 123.4567; round(123.4567, 3) = 123.457
+        provider = _oai_provider(_time_fn=_fixed_clock(0.0, 0.1234567))
+        with respx.mock:
+            respx.post(_OAI_URL).mock(
+                return_value=httpx.Response(200, json=_oai_body("ok"))
+            )
+            result = await provider.complete(
+                [CloudMessage(role="user", content="hi")], model=_OAI_MODEL
+            )
+        # round(,2) = 123.46 ≠ 123.457; round(,4) = 123.4567 ≠ 123.457
+        assert result.latency_ms == pytest.approx(123.457, abs=0.0005)
+
+    @pytest.mark.asyncio
+    async def test_anthropic_latency_rounded_to_3_decimal_places(self):
+        provider = _ant_provider(_time_fn=_fixed_clock(0.0, 0.1234567))
+        with respx.mock:
+            respx.post(_ANT_URL).mock(
+                return_value=httpx.Response(200, json=_ant_body("ok"))
+            )
+            result = await provider.complete(
+                [CloudMessage(role="user", content="hi")], model=_ANT_MODEL
+            )
+        assert result.latency_ms == pytest.approx(123.457, abs=0.0005)
+
+
+class TestCompleteTimeoutDefault:
+    """Kills L174/L283: timeout=30.0 → 29.0/31.0 in complete() signatures."""
+
+    @pytest.mark.asyncio
+    async def test_openai_complete_passes_30s_timeout_by_default(self):
+        provider = _oai_provider()
+        mock_attempt = AsyncMock(
+            return_value=CloudResponse(
+                content="ok", latency_ms=1.0,
+                tokens_input=0, tokens_output=0,
+                model_used="gpt-4o", provider="openai", finish_reason="stop",
+            )
+        )
+        provider._attempt = mock_attempt  # type: ignore[method-assign]
+        await provider.complete(
+            [CloudMessage(role="user", content="hi")], model=_OAI_MODEL
+        )
+        # _attempt is called positionally: (messages, model, max_tokens, timeout)
+        args, _ = mock_attempt.call_args
+        assert args[3] == pytest.approx(30.0)
+
+    @pytest.mark.asyncio
+    async def test_anthropic_complete_passes_30s_timeout_by_default(self):
+        provider = _ant_provider()
+        mock_attempt = AsyncMock(
+            return_value=CloudResponse(
+                content="ok", latency_ms=1.0,
+                tokens_input=0, tokens_output=0,
+                model_used="gpt-4o", provider="openai", finish_reason="stop",
+            )
+        )
+        provider._attempt = mock_attempt  # type: ignore[method-assign]
+        await provider.complete(
+            [CloudMessage(role="user", content="hi")], model=_ANT_MODEL
+        )
+        # _attempt is called positionally: (messages, model, max_tokens, timeout)
+        args, _ = mock_attempt.call_args
+        assert args[3] == pytest.approx(30.0)
+
+
+class TestFallbackProviderDefaults:
+    """Kills L381/L382: FallbackProvider max_tokens=1024 and timeout=30.0 defaults."""
+
+    @pytest.mark.asyncio
+    async def test_fallback_passes_default_max_tokens_to_primary(self):
+        """FallbackProvider.complete() without max_tokens → primary gets 1024."""
+        primary_mock = AsyncMock()
+        primary_mock.complete = AsyncMock(
+            return_value=CloudResponse(
+                content="ok", latency_ms=1.0,
+                tokens_input=0, tokens_output=0,
+                model_used="gpt-4o", provider="openai", finish_reason="stop",
+            )
+        )
+        secondary_mock = AsyncMock()
+        fb = FallbackProvider(primary=primary_mock, secondary=secondary_mock)
+        await fb.complete(
+            [CloudMessage(role="user", content="hi")], model=_OAI_MODEL
+        )
+        # FallbackProvider calls primary.complete(messages, model, max_tokens, timeout)
+        args, _ = primary_mock.complete.call_args
+        assert args[2] == 1024  # max_tokens is 3rd positional arg
+
+    @pytest.mark.asyncio
+    async def test_fallback_passes_default_timeout_to_primary(self):
+        """FallbackProvider.complete() without timeout → primary gets 30.0."""
+        primary_mock = AsyncMock()
+        primary_mock.complete = AsyncMock(
+            return_value=CloudResponse(
+                content="ok", latency_ms=1.0,
+                tokens_input=0, tokens_output=0,
+                model_used="gpt-4o", provider="openai", finish_reason="stop",
+            )
+        )
+        secondary_mock = AsyncMock()
+        fb = FallbackProvider(primary=primary_mock, secondary=secondary_mock)
+        await fb.complete(
+            [CloudMessage(role="user", content="hi")], model=_OAI_MODEL
+        )
+        # FallbackProvider calls primary.complete(messages, model, max_tokens, timeout)
+        args, _ = primary_mock.complete.call_args
+        assert args[3] == pytest.approx(30.0)  # timeout is 4th positional arg
+
+
+class TestRetryCountBoundary:
+    """Kills range(max_retries + 2) and range(max_retries | 1) mutations.
+
+    Two complementary tests:
+    - +2 mutation: set max_retries=1, supply 2 failures then 1 success; original
+      raises (range(2)=[0,1] exhausted), +2 mutation succeeds (range(3) gets 3rd call).
+    - |1 mutation: set max_retries=3 (3|1=3≠4), supply 3 failures then 1 success;
+      original succeeds (range(4) reaches 4th call), |1 mutation raises (range(3) exhausted).
+    """
+
+    @pytest.mark.asyncio
+    async def test_openai_range_plus_two_mutation_raises_after_exact_retries(self):
+        """max_retries=1: exactly 2 calls total; +2 mutation tries 3rd → catches it."""
+        call_n = 0
+
+        def _side_effect(request: httpx.Request) -> httpx.Response:
+            nonlocal call_n
+            call_n += 1
+            if call_n <= 2:
+                raise httpx.ConnectError("fail")
+            return httpx.Response(200, json=_oai_body("ok"))
+
+        with respx.mock:
+            respx.post(_OAI_URL).mock(side_effect=_side_effect)
+            provider = _oai_provider(max_retries=1)
+            with pytest.raises((CloudUnavailableError, CloudTimeoutError)):
+                await provider.complete(
+                    [CloudMessage(role="user", content="hi")], model=_OAI_MODEL
+                )
+        assert call_n == 2  # exactly max_retries+1 calls (original range(2))
+
+    @pytest.mark.asyncio
+    async def test_openai_range_bitor_mutation_succeeds_on_fourth_attempt(self):
+        """max_retries=3: 3|1=3→range(3) misses 4th call; original range(4) reaches it."""
+        call_n = 0
+
+        def _side_effect(request: httpx.Request) -> httpx.Response:
+            nonlocal call_n
+            call_n += 1
+            if call_n <= 3:
+                raise httpx.ConnectError("fail")
+            return httpx.Response(200, json=_oai_body("ok"))
+
+        with respx.mock:
+            respx.post(_OAI_URL).mock(side_effect=_side_effect)
+            provider = _oai_provider(max_retries=3)
+            result = await provider.complete(
+                [CloudMessage(role="user", content="hi")], model=_OAI_MODEL
+            )
+        assert result.content == "ok"
+        assert call_n == 4
+
+    @pytest.mark.asyncio
+    async def test_anthropic_range_plus_two_mutation_raises_after_exact_retries(self):
+        call_n = 0
+
+        def _side_effect(request: httpx.Request) -> httpx.Response:
+            nonlocal call_n
+            call_n += 1
+            if call_n <= 2:
+                raise httpx.ConnectError("fail")
+            return httpx.Response(200, json=_ant_body("ok"))
+
+        with respx.mock:
+            respx.post(_ANT_URL).mock(side_effect=_side_effect)
+            provider = _ant_provider(max_retries=1)
+            with pytest.raises((CloudUnavailableError, CloudTimeoutError)):
+                await provider.complete(
+                    [CloudMessage(role="user", content="hi")], model=_ANT_MODEL
+                )
+        assert call_n == 2
+
+    @pytest.mark.asyncio
+    async def test_anthropic_range_bitor_mutation_succeeds_on_fourth_attempt(self):
+        call_n = 0
+
+        def _side_effect(request: httpx.Request) -> httpx.Response:
+            nonlocal call_n
+            call_n += 1
+            if call_n <= 3:
+                raise httpx.ConnectError("fail")
+            return httpx.Response(200, json=_ant_body("ok"))
+
+        with respx.mock:
+            respx.post(_ANT_URL).mock(side_effect=_side_effect)
+            provider = _ant_provider(max_retries=3)
+            result = await provider.complete(
+                [CloudMessage(role="user", content="hi")], model=_ANT_MODEL
+            )
+        assert result.content == "ok"
+        assert call_n == 4
+
+
+class TestSystemFilteringOrderMatters:
+    """Kills Eq→LtE mutation at L316: role == 'system' → role <= 'system'.
+
+    'assistant' < 'system' alphabetically, so <= mutation incorrectly includes
+    assistant messages in system_parts. By placing assistant BEFORE system in
+    the message list, the <= mutation changes system_parts[0] to assistant content.
+    """
+
+    @pytest.mark.asyncio
+    async def test_system_filter_excludes_assistant_appearing_before_system(self):
+        """When assistant msg precedes system msg, <= mutation picks assistant as system."""
+        captured: list[Any] = []
+
+        def capture(request: httpx.Request) -> httpx.Response:
+            captured.append(json.loads(request.content))
+            return httpx.Response(200, json=_ant_body("ok"))
+
+        with respx.mock:
+            respx.post(_ANT_URL).mock(side_effect=capture)
+            provider = _ant_provider()
+            await provider.complete(
+                [
+                    CloudMessage(role="assistant", content="assistant content"),
+                    CloudMessage(role="system", content="system content"),
+                    CloudMessage(role="user", content="hello"),
+                ],
+                model=_ANT_MODEL,
+            )
+
+        # Original ==: only "system content" matches; system_parts[0]="system content"
+        # <= mutation: "assistant" <= "system" True → system_parts[0]="assistant content"
+        assert captured[0].get("system") == "system content"

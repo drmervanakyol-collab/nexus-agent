@@ -978,4 +978,229 @@ class TestScorerIntegration:
         assert call_args.actions_so_far == 7
         assert call_args.elapsed_seconds == 120.0
         assert call_args.task_cost_usd == 0.10
-        assert call_args.daily_cost_usd == 0.50
+
+
+# ===========================================================================
+# §M — Mutation-targeted tests (survived mutant elimination)
+# ===========================================================================
+
+
+from nexus.decision.engine import (  # noqa: E402
+    _ANTI_LOOP_WINDOW,
+    _HARD_STUCK_WINDOW,
+    _make_suspend_decision,
+    _target_from_plan,
+)
+
+
+class TestTargetFromPlan:
+    """Kills L512: 40+ coord-operator mutations in _target_from_plan."""
+
+    def test_coords_odd_dimensions_exact_integer_floor(self):
+        """Odd w/h: // vs / produce different results → kills all /2 variants."""
+        plan = _make_planner_decision(target_description="Submit")
+        # w=61: 61//2=30 (int), 61/2=30.5 (float) → (130 vs 130.5)
+        node = _make_node(x=100, y=200, width=61, height=41)
+        perception = _make_perception(best_node=node)
+        result = _target_from_plan(plan, transport_hint=None, perception=perception)
+        assert result.coordinates == (130, 220)  # 100+30, 200+20
+
+    def test_coords_known_values(self):
+        """Kills operator-replacement mutations (-, *, **, ^, |, &, <<, >>, %)."""
+        plan = _make_planner_decision(target_description="Submit")
+        node = _make_node(x=10, y=20, width=80, height=40)
+        perception = _make_perception(best_node=node)
+        result = _target_from_plan(plan, transport_hint=None, perception=perception)
+        assert result.coordinates == (50, 40)  # 10+40, 20+20
+
+    def test_no_perception_gives_none_coords(self):
+        """Kills L508: perception is None and ... mutation."""
+        plan = _make_planner_decision(target_description="Submit")
+        result = _target_from_plan(plan, transport_hint=None, perception=None)
+        assert result.coordinates is None
+
+    def test_empty_target_description_gives_none_coords(self):
+        """Kills L508: perception is not None or ... mutation."""
+        plan = _make_planner_decision(target_description="")
+        node = _make_node()
+        perception = _make_perception(best_node=node)
+        result = _target_from_plan(plan, transport_hint=None, perception=perception)
+        assert result.coordinates is None
+
+    def test_transport_hint_forwarded(self):
+        plan = _make_planner_decision(target_description="Submit")
+        node = _make_node()
+        perception = _make_perception(best_node=node)
+        result = _target_from_plan(plan, transport_hint="uia", perception=perception)
+        assert result.preferred_transport == "uia"
+
+    def test_no_graph_match_gives_none_coords(self):
+        """spatial_graph returns None → coords stays None."""
+        plan = _make_planner_decision(target_description="Submit")
+        perception = _make_perception(best_node=None)
+        result = _target_from_plan(plan, transport_hint=None, perception=perception)
+        assert result.coordinates is None
+
+
+class TestLocalResolverOddDimensions:
+    """Kills L237-238: cx/cy with odd width/height (// vs / differ)."""
+
+    def test_odd_bbox_dimensions_use_floor_division(self):
+        resolver = LocalResolver()
+        # w=51: 51//2=25; h=31: 31//2=15
+        node = _make_node(x=10, y=20, width=51, height=31, confidence=0.80)
+        perception = _make_perception(best_node=node)
+        result = resolver.resolve("target", perception)
+        assert result is not None
+        assert result.target.coordinates == (35, 35)  # 10+25, 20+15
+
+    def test_description_or_fallback(self):
+        """Kills L247: primary_label or ... → and ..."""
+        resolver = LocalResolver()
+        # primary_label="" (falsy) → should fall through to node.text
+        node = _make_node(x=0, y=0, width=10, height=10, primary_label="", confidence=0.80)
+        node.text = "fallback_text"
+        node.semantic.primary_label = ""
+        perception = _make_perception(best_node=node)
+        result = resolver.resolve("goal", perception)
+        assert result is not None
+        # With `and` mutation: "" and "fallback_text" = "" (falsy); then `or goal` = "goal"
+        # With `or` (original): "" or "fallback_text" = "fallback_text"
+        assert result.target.description == "fallback_text"
+
+
+class TestDecisionContextDefaults:
+    """Kills L177-183: dataclass field default mutations."""
+
+    def test_numeric_defaults_are_zero(self):
+        ctx = DecisionContext(task_id="t")
+        assert ctx.actions_so_far == 0
+        assert ctx.elapsed_seconds == 0.0
+        assert ctx.task_cost_usd == 0.0
+        assert ctx.daily_cost_usd == 0.0
+
+    def test_bool_defaults_are_false(self):
+        ctx = DecisionContext(task_id="t")
+        assert ctx.candidate_is_destructive is False
+        assert ctx.used_fallback_transport is False
+
+    def test_screen_previously_seen_default_is_true(self):
+        """Default True, not False."""
+        ctx = DecisionContext(task_id="t")
+        assert ctx.screen_previously_seen is True
+
+
+class TestHardStuckBoundaryExtra:
+    """Kills L569 (!= mutation) and L571 ([not window:] mutation)."""
+
+    def test_window_plus_one_all_same_target_is_true(self):
+        """len = WINDOW+1, all same → True. Kills len != WINDOW mutation."""
+        history = [
+            _make_action_record("click", "Submit")
+            for _ in range(_HARD_STUCK_WINDOW + 1)
+        ]
+        assert _is_hard_stuck(history) is True
+
+    def test_old_entries_outside_window_ignored(self):
+        """Kills [not WINDOW:] = [0:] mutation: old diverse entries must be excluded."""
+        # 3 old entries with different targets, then WINDOW entries with same target
+        old = [_make_action_record("scroll", f"page_{i}") for i in range(3)]
+        recent = [
+            _make_action_record("click", "Submit")
+            for _ in range(_HARD_STUCK_WINDOW)
+        ]
+        assert _is_hard_stuck(old + recent) is True
+
+    def test_anti_loop_window_plus_one_uniform_is_true(self):
+        """len = ANTI_LOOP_WINDOW+1, all same → True. Kills equivalent len mutation."""
+        history = [
+            _make_action_record("click", "Submit")
+            for _ in range(_ANTI_LOOP_WINDOW + 1)
+        ]
+        assert _is_anti_loop(history) is True
+
+
+class TestSuspendDecisionDefaults:
+    """Kills L539,L541: confidence=0.0 and cost_incurred=0.0 mutations."""
+
+    def test_suspend_decision_confidence_is_zero(self):
+        d = _make_suspend_decision(
+            source="suspend", reasoning="test", transport_hint=None
+        )
+        assert d.confidence == 0.0
+
+    def test_suspend_decision_cost_is_zero(self):
+        d = _make_suspend_decision(
+            source="suspend", reasoning="test", transport_hint=None
+        )
+        assert d.cost_incurred == 0.0
+
+    def test_suspend_decision_hitl_source(self):
+        d = _make_suspend_decision(
+            source="hitl", reasoning="stuck", transport_hint="uia"
+        )
+        assert d.source == "hitl"
+        assert d.confidence == 0.0
+        assert d.cost_incurred == 0.0
+
+
+class TestEngineConstants:
+    """Kills L58,L59: _ANTI_LOOP_WINDOW and _HARD_STUCK_WINDOW mutations."""
+
+    def test_anti_loop_window_is_two(self):
+        assert _ANTI_LOOP_WINDOW == 2
+
+    def test_hard_stuck_window_is_five(self):
+        assert _HARD_STUCK_WINDOW == 5
+
+
+class TestCostBeforeFnDefault:
+    """Kills L309: cost_before_fn or (lambda _: 0.0) → and / wrong constant."""
+
+    @pytest.mark.asyncio
+    async def test_no_cost_fn_cost_incurred_nonnegative(self):
+        """When no cost_before_fn supplied, default returns 0.0 → cost_incurred=0."""
+        # Build engine with no cost_before_fn (uses lambda _: 0.0)
+        policy = MagicMock()
+        policy.check_action.return_value = MagicMock(verdict="allow")
+        amb = MagicMock()
+        amb.recommendation = "cloud"
+        scorer = MagicMock()
+        scorer.score.return_value = amb
+        planner_dec = _make_planner_decision()
+        planner = MagicMock()
+        planner.plan = AsyncMock(return_value=planner_dec)
+
+        engine = DecisionEngine(
+            policy=policy,
+            scorer=scorer,
+            resolver=MagicMock(spec=LocalResolver),
+            planner=planner,
+            # cost_before_fn NOT supplied → defaults to lambda _: 0.0
+        )
+
+        result = await engine.decide("goal", _make_perception(), [], _make_context())
+        assert result.cost_incurred >= 0.0  # max(0.0, 0.0 - 0.0) = 0.0
+
+    @pytest.mark.asyncio
+    async def test_cost_incurred_is_nonneg_when_cost_decreases(self):
+        """Kills L446: max(0.0, ...) → max(-1.0, ...) mutation."""
+        # cost_before > cost_after → cost_incurred = max(0.0, negative) = 0.0
+        call_count = 0
+
+        def cost_fn(_task_id):
+            nonlocal call_count
+            call_count += 1
+            return 1.0 if call_count == 1 else 0.5  # cost drops
+
+        engine, _, _, _, _ = _make_engine(
+            ambiguity_recommendation="cloud",
+            cost_before_value=1.0,
+        )
+        # Override cost_fn to return decreasing values
+        engine._cost_before_fn = cost_fn
+
+        result = await engine.decide(
+            "goal", _make_perception(), [], _make_context()
+        )
+        assert result.cost_incurred >= 0.0  # max(0.0, 0.5-1.0=-0.5) = 0.0

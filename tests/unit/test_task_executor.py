@@ -510,3 +510,135 @@ class TestHealthCheckBranch:
         assert result.status == "failed"
         assert result.steps_completed == 0
         dec_engine.decide.assert_not_awaited()
+
+
+# ===========================================================================
+# §M — Mutation-targeted tests (survived mutant elimination)
+# ===========================================================================
+
+
+class TestResolveUiaTargetBoundary:
+    """Kills L146: r.y <= y mutation (>= variant covers y above element)."""
+
+    def _make_elem(self, x=100, y=100, width=80, height=50) -> Any:
+        from unittest.mock import MagicMock
+        rect = MagicMock()
+        rect.x = x; rect.y = y; rect.width = width; rect.height = height
+        elem = MagicMock()
+        elem.bounding_rect = rect
+        elem.is_visible = True
+        return elem
+
+    def _make_source(self, elements: list) -> Any:
+        from unittest.mock import MagicMock
+        src = MagicMock()
+        src.source_type = "uia"
+        src.data = elements
+        return src
+
+    def _make_target(self, coords: tuple[int, int]) -> Any:
+        from unittest.mock import MagicMock
+        tgt = MagicMock()
+        tgt.element_id = None
+        tgt.description = None
+        tgt.coordinates = coords
+        return tgt
+
+    def test_coord_inside_rect_returns_element(self):
+        from nexus.core.task_executor import _resolve_uia_target
+        elem = self._make_elem(x=100, y=100, width=80, height=50)
+        src = self._make_source([elem])
+        tgt = self._make_target((140, 125))  # inside: x∈[100,180], y∈[100,150]
+        assert _resolve_uia_target(src, tgt) is elem
+
+    def test_coord_above_rect_returns_none(self):
+        """y < r.y — should be None. Kills r.y >= y mutation."""
+        from nexus.core.task_executor import _resolve_uia_target
+        elem = self._make_elem(x=100, y=100, width=80, height=50)
+        src = self._make_source([elem])
+        tgt = self._make_target((140, 50))  # y=50 is above r.y=100
+        assert _resolve_uia_target(src, tgt) is None
+
+    def test_coord_at_top_edge_returns_element(self):
+        """y == r.y (inclusive boundary)."""
+        from nexus.core.task_executor import _resolve_uia_target
+        elem = self._make_elem(x=100, y=100, width=80, height=50)
+        src = self._make_source([elem])
+        tgt = self._make_target((140, 100))
+        assert _resolve_uia_target(src, tgt) is elem
+
+    def test_coord_below_rect_returns_none(self):
+        """y > r.y + r.height — outside bottom edge."""
+        from nexus.core.task_executor import _resolve_uia_target
+        elem = self._make_elem(x=100, y=100, width=80, height=50)
+        src = self._make_source([elem])
+        tgt = self._make_target((140, 200))  # y=200 > 150
+        assert _resolve_uia_target(src, tgt) is None
+
+
+class TestDefaultDoneFn:
+    """Kills L806: == 'cloud' → > 'cloud' mutation."""
+
+    def _decision(self, action_type: str, source: str) -> Any:
+        from unittest.mock import MagicMock
+        d = MagicMock()
+        d.action_type = action_type
+        d.source = source
+        # getattr fallback for task_status
+        d.task_status = "in_progress"
+        return d
+
+    def test_none_action_cloud_source_returns_true(self):
+        from nexus.core.task_executor import _default_done_fn
+        d = self._decision("none", "cloud")
+        assert _default_done_fn(d) is True
+
+    def test_none_action_non_cloud_source_returns_false(self):
+        """Kills > 'cloud' mutation: 'local' > 'cloud' is True, but should be False."""
+        from nexus.core.task_executor import _default_done_fn
+        d = self._decision("none", "local")
+        assert _default_done_fn(d) is False
+
+    def test_done_action_returns_true(self):
+        from nexus.core.task_executor import _default_done_fn
+        d = self._decision("done", "local")
+        assert _default_done_fn(d) is True
+
+    def test_complete_task_status_returns_true(self):
+        from nexus.core.task_executor import _default_done_fn
+        from unittest.mock import MagicMock
+        d = MagicMock()
+        d.action_type = "click"
+        d.task_status = "complete"
+        assert _default_done_fn(d) is True
+
+
+class TestDefaultCaptureFn:
+    """Kills L759: height=1 → height=2 mutation."""
+
+    @pytest.mark.asyncio
+    async def test_default_capture_fn_dimensions(self):
+        from nexus.core.task_executor import _default_capture_fn
+        frame = await _default_capture_fn()
+        assert frame.width == 1
+        assert frame.height == 1
+        assert frame.data.shape == (1, 1, 3)
+
+    @pytest.mark.asyncio
+    async def test_default_capture_fn_sequence_is_zero(self):
+        from nexus.core.task_executor import _default_capture_fn
+        frame = await _default_capture_fn()
+        assert frame.sequence_number == 0
+
+
+class TestDefaultPerceiveFn:
+    """Kills L792: frame_sequence=1 → frame_sequence=0 mutation."""
+
+    @pytest.mark.asyncio
+    async def test_default_perceive_fn_frame_sequence(self):
+        from nexus.core.task_executor import _default_perceive_fn
+        from unittest.mock import MagicMock
+        frame = MagicMock()
+        source = _uia_source()
+        result = await _default_perceive_fn(frame, source)
+        assert result.frame_sequence == 1
